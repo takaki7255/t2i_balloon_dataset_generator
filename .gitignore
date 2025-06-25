@@ -1,3 +1,5 @@
 .env
-generated_image/*
-mask/*
+generated_balloons/*
+masks/*
+results/*
+generated_backs/*
