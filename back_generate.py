@@ -7,10 +7,30 @@ from openai import OpenAI
 import base64
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 load_dotenv(".env")
 api_key = os.environ.get("OPENAI_API_KEY")
 client = OpenAI(api_key=api_key)
+
+def get_next_filename(directory: str, prefix: str = "", extension: str = ".png") -> str:
+    """次のナンバリングファイル名を取得"""
+    os.makedirs(directory, exist_ok=True)
+    
+    existing_files = []
+    for file in os.listdir(directory):
+        if file.endswith(extension):
+            # ファイル名から数字部分を抽出
+            stem = Path(file).stem
+            if stem.replace(prefix, "").isdigit():
+                num = int(stem.replace(prefix, ""))
+                existing_files.append(num)
+    
+    # 次の番号を決定
+    next_num = 1 if not existing_files else max(existing_files) + 1
+    filename = f"{prefix}{next_num:03d}{extension}"
+    
+    return os.path.join(directory, filename)
 
 # 片側ページのレイアウトを指定する場合
 prompt = """
@@ -35,6 +55,11 @@ result = client.images.generate(
 image_base64 = result.data[0].b64_json
 image_bytes = base64.b64decode(image_base64)
 
-# Save the image to a file
-with open("generated_image/output.png", "wb") as f:
+# 次のナンバリングファイル名を取得
+output_path = get_next_filename("generated_backs")
+
+# 画像を保存
+with open(output_path, "wb") as f:
     f.write(image_bytes)
+
+print(f"背景画像を保存しました: {output_path}")
