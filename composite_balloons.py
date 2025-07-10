@@ -10,7 +10,7 @@ import random
 
 def composite_balloon(background_path: str, balloon_path: str, mask_path: str, 
                      output_dir: str = "results", mask_output_dir: str = "results_mask",
-                     scale_range: tuple = (0.2, 0.4), position: tuple = None) -> tuple:
+                     scale_range: tuple = (0.1, 0.4), position: tuple = None) -> tuple:
     """
     背景画像に吹き出しとマスクを合成する
     
