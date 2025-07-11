@@ -6,3 +6,4 @@ results/*
 generated_backs/*
 results_mask/*
 *.png
+wandb/*

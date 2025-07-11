@@ -215,7 +215,7 @@ def main():
         if va_iou>best_iou:
             best_iou,patience=va_iou,0
             ckpt=run_dir/f"best_ep{ep:03}_iou{va_iou:.4f}.pt"
-            torch.save(model.state_dict(),ckpt); wandb.save(str(ckpt))
+            torch.save(model.state_dict(), ckpt)
         else:
             patience+=1
             if patience>=cfg["PATIENCE"]:
