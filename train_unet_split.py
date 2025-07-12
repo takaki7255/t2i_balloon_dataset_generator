@@ -9,6 +9,8 @@ import numpy as np
 import torch, torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from sklearn.metrics import precision_recall_curve, auc
+import matplotlib.pyplot as plt
 from PIL import Image
 from tqdm import tqdm
 import wandb
@@ -16,7 +18,7 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # データセット
-    "ROOT":        Path("dataset"),
+    "ROOT":        Path("real_dataset"),  # train/val フォルダのルート
     "IMG_SIZE":    512,
 
     # 学習
@@ -28,8 +30,10 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "synthetic", # または "real" / "synreal" データセットによって書き換える
+    "DATASET":     "real", # または "real" / "synreal" データセットによって書き換える
     "RUN_NAME":    "",
+
+    "MODELS_DIR":  Path("models"),
 
     # 予測マスク出力
     "SAVE_PRED_EVERY": 5,      # エポック間隔
@@ -49,6 +53,11 @@ def seed_everything(seed):
 class BalloonDataset(Dataset):
     def __init__(self, img_dir, mask_dir, img_size):
         self.img_paths = sorted(glob.glob(str(img_dir / "*.png")))
+        #jpgに対応
+        if not self.img_paths:
+            self.img_paths = sorted(glob.glob(str(img_dir / "*.jpg")))
+        if not self.img_paths:
+            raise FileNotFoundError(f"No images found in {img_dir}")
         self.mask_dir  = mask_dir
         self.img_tf = transforms.Compose([
             transforms.Resize((img_size, img_size)),
@@ -78,7 +87,20 @@ def next_version(models_dir, prefix):
     last = int(exist[-1].stem.split("-")[-1])
     return f"{last+1:02d}"
 
-# -------------- U-Net (省略せず再掲) --------------
+def collect_probs(model, loader, device):
+    model.eval()
+    probs, gts = [], []
+    with torch.no_grad():
+        for x, y, _ in loader:
+            x = x.to(device)
+            p = torch.sigmoid(model(x)).cpu().numpy()      # (B,1,H,W)
+            probs.append(p.reshape(-1))                    # flatten
+            gts.append(y.numpy().reshape(-1))
+    probs = np.concatenate(probs)   # shape: [N_pixels]
+    gts   = np.concatenate(gts)
+    return probs, gts
+
+# -------------- U-Net --------------
 class DoubleConv(nn.Module):
     def __init__(self, in_c, out_c):
         super().__init__()
@@ -220,6 +242,18 @@ def main():
         va_dice,va_iou=eval_epoch(model,dl_va,dev)
         sched.step()
 
+        if ep % 5 == 0:
+            probs, gts = collect_probs(model, dl_va, dev)
+            prec, rec, _ = precision_recall_curve(gts, probs)
+            pr_auc = auc(rec, prec)
+            wandb.log({"epoch": ep,
+                    "val/pr_auc": pr_auc,
+                    "val/pr_curve": wandb.plot.line(
+                            wandb.Table(data=np.column_stack([rec, prec]),
+                                        columns=["recall","precision"]),
+                            "recall", "precision",
+                            title=f"PR Curve ep{ep} (AUC={pr_auc:.3f})")})
+
         # --- 予測 PNG 保存 & wandb 画像ログ ---
         save_predictions(model, dl_va, cfg, ep, run_dir, dev)
 
@@ -231,8 +265,9 @@ def main():
         if va_iou>best_iou:
             best_iou,patience=va_iou,0
             ckpt_wandb = run_dir / f"best_ep{ep:03}_iou{va_iou:.4f}.pt"
+            # torch.save(model.state_dict(), ckpt_wandb)
+            # wandb.save(str(ckpt_wandb))
             torch.save(model.state_dict(), ckpt_wandb)
-            wandb.save(str(ckpt_wandb))
 
             # models/ にもコピー（固定ファイル名）
             ckpt_models = CFG["MODELS_DIR"] / f"{model_tag}.pt"
