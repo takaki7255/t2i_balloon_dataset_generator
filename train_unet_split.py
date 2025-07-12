@@ -28,7 +28,8 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "RUN_NAME":    "unet-split",
+    "DATASET":     "synthetic", # または "real" / "synreal" データセットによって書き換える
+    "RUN_NAME":    "",
 
     # 予測マスク出力
     "SAVE_PRED_EVERY": 5,      # エポック間隔
@@ -68,6 +69,14 @@ class BalloonDataset(Dataset):
         mask = self.mask_tf(Image.open(mask_p).convert("L"))
         mask = (mask > .5).float()
         return img, mask, stem               # stem を返してファイル名に利用
+
+# --- 連番を自動で振る -------------------------------------------------
+def next_version(models_dir, prefix):
+    models_dir.mkdir(exist_ok=True)
+    exist = sorted(models_dir.glob(f"{prefix}-*.pt"))
+    if not exist: return "01"
+    last = int(exist[-1].stem.split("-")[-1])
+    return f"{last+1:02d}"
 
 # -------------- U-Net (省略せず再掲) --------------
 class DoubleConv(nn.Module):
@@ -176,18 +185,25 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
 def main():
     cfg=CFG; seed_everything(cfg["SEED"])
     dev="cuda" if torch.cuda.is_available() else "cpu"
+    prefix = f"{CFG['DATASET']}-unet"
+    version = next_version(CFG["MODELS_DIR"], prefix)
+    model_tag = f"{prefix}-{version}"          # synthetic-unet-01 など
 
-    wandb.init(project=cfg["WANDB_PROJ"],name=cfg["RUN_NAME"],config=cfg)
+    # wandb の run 名が空ならここで入れる
+    if not CFG["RUN_NAME"]:
+        CFG["RUN_NAME"] = model_tag
+
+    wandb.init(project=CFG["WANDB_PROJ"], name=CFG["RUN_NAME"], config=CFG)
     run_dir = Path(wandb.run.dir)
 
     root=cfg["ROOT"]
     train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"])
     val_ds  =BalloonDataset(root/"val/images"  ,root/"val/masks"  ,cfg["IMG_SIZE"])
-    test_ds =BalloonDataset(root/"test/images" ,root/"test/masks" ,cfg["IMG_SIZE"])
+    #test_ds =BalloonDataset(root/"test/images" ,root/"test/masks" ,cfg["IMG_SIZE"])
 
     dl_tr=DataLoader(train_ds,batch_size=cfg["BATCH"],shuffle=True ,num_workers=4,pin_memory=True)
     dl_va=DataLoader(val_ds  ,batch_size=cfg["BATCH"],shuffle=False,num_workers=4,pin_memory=True)
-    dl_te=DataLoader(test_ds ,batch_size=cfg["BATCH"],shuffle=False,num_workers=4,pin_memory=True)
+    #dl_te=DataLoader(test_ds ,batch_size=cfg["BATCH"],shuffle=False,num_workers=4,pin_memory=True)
 
     model=UNet().to(dev)
     if cfg["RESUME"]:
@@ -214,18 +230,31 @@ def main():
 
         if va_iou>best_iou:
             best_iou,patience=va_iou,0
-            ckpt=run_dir/f"best_ep{ep:03}_iou{va_iou:.4f}.pt"
-            torch.save(model.state_dict(), ckpt)
+            ckpt_wandb = run_dir / f"best_ep{ep:03}_iou{va_iou:.4f}.pt"
+            torch.save(model.state_dict(), ckpt_wandb)
+            wandb.save(str(ckpt_wandb))
+
+            # models/ にもコピー（固定ファイル名）
+            ckpt_models = CFG["MODELS_DIR"] / f"{model_tag}.pt"
+            torch.save(model.state_dict(), ckpt_models)
         else:
             patience+=1
             if patience>=cfg["PATIENCE"]:
                 print("Early stopping."); break
 
-    # -------- test 評価 --------
-    test_dice,test_iou=eval_epoch(model,dl_te,dev)
-    print(f"Test Dice={test_dice:.4f} IoU={test_iou:.4f}")
-    wandb.log({"test_dice":test_dice,"test_iou":test_iou})
-    wandb.finish()
+    # # 1) ベスト重みをロード
+    # best_model_path = CFG["MODELS_DIR"] / f"{model_tag}.pt"
+    # model.load_state_dict(torch.load(best_model_path, map_location=dev))
+
+    # # 2) test セットを読み込み
+    # test_ds = BalloonDataset(root/"test/images", root/"test/masks", cfg["IMG_SIZE"])
+    # dl_te   = DataLoader(test_ds, batch_size=cfg["BATCH"], shuffle=False,
+    #                      num_workers=4, pin_memory=True)
+
+    # # 3) 推論＆ログ
+    # test_dice, test_iou = eval_epoch(model, dl_te, dev)
+    # print(f"[TEST] Dice={test_dice:.4f}  IoU={test_iou:.4f}")
+    # wandb.log({"test_dice": test_dice, "test_iou": test_iou})
 
 if __name__=="__main__":
     main()
