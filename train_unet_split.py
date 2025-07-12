@@ -21,7 +21,7 @@ CFG = {
 
     # 学習
     "BATCH":       8,
-    "EPOCHS":      50,
+    "EPOCHS":      100,
     "LR":          1e-4,
     "PATIENCE":    10,
     "SEED":        42,
