@@ -10,8 +10,8 @@ from pathlib import Path
 CFG = {
     "IMG_DIR":   Path("results"),          # 元画像ディレクトリ
     "MASK_DIR":  Path("results_mask"),     # マスクディレクトリ
-    "OUT_DIR":   Path("dataset"),          # 出力先ルート
-    "SPLIT":     {"train":0.8, "val":0.1, "test":0.1},
+    "OUT_DIR":   Path("syn_dataset"),          # 出力先ルート
+    "SPLIT":     {"train":0.8, "val":0.2},
     "SEED":      42,
 }
 # -------------------------------------------------------------

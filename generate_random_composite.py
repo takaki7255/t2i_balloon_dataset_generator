@@ -206,7 +206,7 @@ def main():
     CFG = {
         "SCALE_RANGE": (0.1, 0.4),          # 吹き出しのスケール範囲
         "NUM_BALLOONS_RANGE": (2, 10),      # 配置する吹き出し数の範囲
-        "IMAGES_PER_BACKGROUND": 50,         # 1背景画像あたりの生成数
+        "IMAGES_PER_BACKGROUND": 10,         # 1背景画像あたりの生成数
         "MAX_ATTEMPTS": 200,                # 配置試行回数の上限
         "OVERLAP_THRESHOLD": 0.15,          # 重複許容率
     }

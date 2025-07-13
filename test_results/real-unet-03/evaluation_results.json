@@ -1,0 +1,32 @@
+{
+  "model_tag": "real-unet-03",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-07-13T19:40:50.733613",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8875954110478023,
+      "iou": 0.82686542057895,
+      "precision": 0.9204869056381727,
+      "recall": 0.8804126588641497,
+      "f1_score": 0.8875953626142652
+    },
+    "global_metrics": {
+      "dice": 0.9207762863448536,
+      "iou": 0.8531838901374225,
+      "precision": 0.9396542315164159,
+      "recall": 0.9026419298029765,
+      "f1_score": 0.9207762363650219,
+      "accuracy": 0.9819153976440392
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.16778870480039582,
+    "iou_std": 0.19613605014672789,
+    "precision_std": 0.14280199431892,
+    "recall_std": 0.1846057504793565,
+    "f1_std": 0.1677886991328606
+  }
+}

@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: real-unet-03
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-07-13 19:40:50
+
+Average Metrics (per image):
+  Dice Score: 0.8876 ± 0.1678
+  IoU:        0.8269 ± 0.1961
+  Precision:  0.9205 ± 0.1428
+  Recall:     0.8804 ± 0.1846
+  F1 Score:   0.8876 ± 0.1678
+
+Global Metrics (all pixels):
+  Dice Score: 0.9208
+  IoU:        0.8532
+  Precision:  0.9397
+  Recall:     0.9026
+  F1 Score:   0.9208
+  Accuracy:   0.9819
