@@ -5,7 +5,7 @@ Model: synreal-unet-02
 Dataset: test_dataset
 Image Size: 512
 Total Images: 100
-Evaluation Time: 2025-07-14 16:59:37
+Evaluation Time: 2025-07-14 17:47:33
 
 Average Metrics (per image):
   Dice Score: 0.6070 ± 0.1936

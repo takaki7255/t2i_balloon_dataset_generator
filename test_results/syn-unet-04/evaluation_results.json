@@ -3,7 +3,7 @@
   "data_root": "test_dataset",
   "img_size": 512,
   "batch_size": 8,
-  "evaluation_time": "2025-07-14T16:58:40.028237",
+  "evaluation_time": "2025-07-14T17:49:48.067758",
   "metrics": {
     "average_metrics": {
       "dice": 0.38361036289928874,

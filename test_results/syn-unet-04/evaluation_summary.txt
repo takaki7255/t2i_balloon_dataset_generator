@@ -5,7 +5,7 @@ Model: syn-unet-04
 Dataset: test_dataset
 Image Size: 512
 Total Images: 100
-Evaluation Time: 2025-07-14 16:58:40
+Evaluation Time: 2025-07-14 17:49:48
 
 Average Metrics (per image):
   Dice Score: 0.3836 ± 0.1671

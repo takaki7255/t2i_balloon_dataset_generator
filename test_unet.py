@@ -19,7 +19,7 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # ------- 必ず書き換える -------------
-    "MODEL_TAG":   "synreal-unet-02",     # 例： models/real-unet-01.pt
+    "MODEL_TAG":   "syn-unet-05",     # 例： models/real-unet-01.pt
     "DATA_ROOT":   Path("test_dataset"),  # images, masks が入ったテストデータセット
     # ----------------------------------
     "IMG_SIZE":    512,
@@ -196,8 +196,10 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
     
     images_dir = result_dir / "images"
     predicts_dir = result_dir / "predicts"
+    comparisons_dir = result_dir / "comparisons"
     images_dir.mkdir(exist_ok=True)
     predicts_dir.mkdir(exist_ok=True)
+    comparisons_dir.mkdir(exist_ok=True)
     
     img_logs = []
     saved = 0
@@ -217,6 +219,13 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
             # 予測マスクを保存
             Image.fromarray(pred_bin.astype(np.uint8)).save(predicts_dir / f"{stem[i]}_pred.png")
             
+            # 比較画像を作成・保存 (元画像 | 予測マスク)
+            comparison = np.concatenate([
+                orig_img,
+                np.stack([pred_bin] * 3, 2).astype(np.uint8)
+            ], axis=1)
+            Image.fromarray(comparison).save(comparisons_dir / f"{stem[i]}_comparison.png")
+            
             # wandb用の画像（最初のN枚のみ）
             if saved < cfg["SAVE_PRED_N"]:
                 trio = np.concatenate([
@@ -232,6 +241,7 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
     
     print(f"画像保存完了: {images_dir}")
     print(f"予測結果保存完了: {predicts_dir}")
+    print(f"比較画像保存完了: {comparisons_dir}")
 
 
 # ---------------- Save Results -------
