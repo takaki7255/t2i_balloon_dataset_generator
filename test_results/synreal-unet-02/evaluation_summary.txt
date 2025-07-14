@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: synreal-unet-02
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-07-14 16:59:37
+
+Average Metrics (per image):
+  Dice Score: 0.6070 ± 0.1936
+  IoU:        0.4615 ± 0.1873
+  Precision:  0.5523 ± 0.2253
+  Recall:     0.7433 ± 0.1680
+  F1 Score:   0.6070 ± 0.1936
+
+Global Metrics (all pixels):
+  Dice Score: 0.6399
+  IoU:        0.4704
+  Precision:  0.5521
+  Recall:     0.7608
+  F1 Score:   0.6399
+  Accuracy:   0.9034

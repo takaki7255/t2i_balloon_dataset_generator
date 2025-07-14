@@ -18,7 +18,7 @@ target_category = "balloon"                                   # 処理対象カ�
 datasets = {
     "real_dataset": {
         "output_root": "real_dataset",
-        "num_samples": 200,
+        "num_samples": 50,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {

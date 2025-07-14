@@ -1,0 +1,32 @@
+{
+  "model_tag": "synreal-unet-02",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-07-14T16:59:37.327654",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.607039241858351,
+      "iou": 0.46153552086228183,
+      "precision": 0.552285040251773,
+      "recall": 0.7433141977729815,
+      "f1_score": 0.6070391961257949
+    },
+    "global_metrics": {
+      "dice": 0.6398695770568149,
+      "iou": 0.4704472205483072,
+      "precision": 0.5520888134648168,
+      "recall": 0.7608415052598894,
+      "f1_score": 0.6398695283208203,
+      "accuracy": 0.9033882522582973
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.19356531517236628,
+    "iou_std": 0.1873045639028366,
+    "precision_std": 0.22533863024108433,
+    "recall_std": 0.16795725974070144,
+    "f1_std": 0.19356530946695594
+  }
+}
