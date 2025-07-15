@@ -257,13 +257,13 @@ def main():
     backgrounds_dir = "generated_backs"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "syn_dataset"
+    final_output_dir = "syn1000_dataset"
     
     # 設定
     CFG = {
         "SCALE_RANGE": (0.1, 0.4),          # 吹き出しのスケール範囲
         "NUM_BALLOONS_RANGE": (2, 10),      # 配置する吹き出し数の範囲
-        "TARGET_TOTAL_IMAGES": 500,         # 目標総画像数
+        "TARGET_TOTAL_IMAGES": 1000,         # 目標総画像数
         "MAX_ATTEMPTS": 200,                # 配置試行回数の上限
         "BALLOON_SPLIT_RATIO": 0.8,         # 吹き出しのtrain:val比率
         "SEED": 42,

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Model Evaluation Results
 ==================================================
 
@@ -21,3 +22,28 @@ Global Metrics (all pixels):
   Recall:     0.9446
   F1 Score:   0.4014
   Accuracy:   0.6822
+=======
+Model Evaluation Results
+==================================================
+
+Model: syn1000-unet-01
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-07-15 13:29:08
+
+Average Metrics (per image):
+  Dice Score: 0.3907 ± 0.1572
+  IoU:        0.2547 ± 0.1232
+  Precision:  0.2593 ± 0.1266
+  Recall:     0.9328 ± 0.1034
+  F1 Score:   0.3907 ± 0.1572
+
+Global Metrics (all pixels):
+  Dice Score: 0.4014
+  IoU:        0.2511
+  Precision:  0.2548
+  Recall:     0.9446
+  F1 Score:   0.4014
+  Accuracy:   0.6822
+>>>>>>> 33675876a6eb38873913b24b141da708fc632616
