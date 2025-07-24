@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: new_finetune-finetune-best
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-07-24 16:49:56
+
+Average Metrics (per image):
+  Dice Score: 0.7596 ± 0.1840
+  IoU:        0.6430 ± 0.2085
+  Precision:  0.6635 ± 0.2129
+  Recall:     0.9487 ± 0.0859
+  F1 Score:   0.7596 ± 0.1840
+
+Global Metrics (all pixels):
+  Dice Score: 0.7945
+  IoU:        0.6590
+  Precision:  0.6793
+  Recall:     0.9568
+  F1 Score:   0.7945
+  Accuracy:   0.9442

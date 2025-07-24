@@ -1,0 +1,32 @@
+{
+  "model_tag": "new_finetune-finetune-best",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-07-24T16:49:56.339281",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.759641232239341,
+      "iou": 0.643020999059588,
+      "precision": 0.6635088930425616,
+      "recall": 0.9487319287771955,
+      "f1_score": 0.7596411858849197
+    },
+    "global_metrics": {
+      "dice": 0.7944754857824602,
+      "iou": 0.659028892745598,
+      "precision": 0.6792517604534715,
+      "recall": 0.9567766826266755,
+      "f1_score": 0.7944754372212248,
+      "accuracy": 0.944157981872555
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.18402625657609964,
+    "iou_std": 0.20850810398426367,
+    "precision_std": 0.21287070400639668,
+    "recall_std": 0.08587674065507554,
+    "f1_std": 0.18402625092006306
+  }
+}

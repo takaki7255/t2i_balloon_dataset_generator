@@ -15,12 +15,12 @@ from train_unet_split import (  # 既存実装を再利用
 # --------------------- 設定 ---------------------- #
 CFG = {
     # ★ ① 新しいデータセットルート
-    "ROOT":        Path("my_new_dataset"),   # train/val 構造は同じにする
+    "ROOT":        Path("real_dataset_real_unet_03"),   # train/val 構造は同じにする
     "IMG_SIZE":    512,
 
     # ★ ② ハイパーパラメータ（微調整用に小さめ）
     "BATCH":       4,
-    "EPOCHS":      30,
+    "EPOCHS":      100,
     "LR":          1e-5,
     "PATIENCE":    8,
     "SEED":        42,
@@ -31,7 +31,7 @@ CFG = {
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
-    "RESUME":      "models/syn1000-unet-01.pt",
+    "RESUME":      "models/syn-unet-05.pt",
 
     "MODELS_DIR":  Path("models"),
 
@@ -79,6 +79,9 @@ def main():
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg["EPOCHS"])
     lossf = ComboLoss()
 
+    # 元モデル名を取得（拡張子を除く）
+    base_model_name = Path(cfg["RESUME"]).stem if cfg["RESUME"] else "scratch"
+    
     best_iou, patience = 0, 0
     for ep in range(1, cfg["EPOCHS"] + 1):
         t0 = time.time()
@@ -95,7 +98,7 @@ def main():
 
         if va_iou > best_iou:
             best_iou, patience = va_iou, 0
-            ckpt = cfg["MODELS_DIR"] / f"{cfg['DATASET']}-finetune-best.pt"
+            ckpt = cfg["MODELS_DIR"] / f"{base_model_name}-{cfg['DATASET']}-best.pt"
             torch.save(model.state_dict(), ckpt)
         else:
             patience += 1
