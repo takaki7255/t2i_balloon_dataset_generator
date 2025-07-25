@@ -2,7 +2,7 @@ import os
 import glob
 from pathlib import Path
 
-def rename_files(directory="generated_balloons"):
+def rename_files(directory="./generated_balloons/"):
     """
     Rename all image files in the specified directory to sequential numbers.
     
