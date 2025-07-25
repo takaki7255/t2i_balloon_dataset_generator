@@ -206,9 +206,12 @@ def main():
     CFG = {
         "SCALE_RANGE": (0.1, 0.4),          # 吹き出しのスケール範囲
         "NUM_BALLOONS_RANGE": (2, 10),      # 配置する吹き出し数の範囲
-        "IMAGES_PER_BACKGROUND": 10,         # 1背景画像あたりの生成数
+        "IMAGES_PER_BACKGROUND": 10,         # 1背景画像あたりの生成数（MAX_IMAGES指定時は無視される）
         "MAX_ATTEMPTS": 200,                # 配置試行回数の上限
         "OVERLAP_THRESHOLD": 0.15,          # 重複許容率
+        "MAX_IMAGES": 10,                   # 最大生成画像数（Noneの場合は全背景を処理）
+                                           # 例: 50 で最大50枚まで生成して停止
+        "SEED": 42                          # ランダムシード
     }
     
     # ディレクトリ作成
@@ -233,15 +236,29 @@ def main():
             else:
                 print(f"警告: {balloon_file} に対応するマスク {mask_file} が見つかりません")
     
+    # ランダムシード設定
+    random.seed(CFG["SEED"])
+    
     # 背景画像を取得
     background_files = []
     for bg_file in os.listdir(backgrounds_dir):
         if bg_file.endswith(('.png', '.jpg', '.jpeg')):
             background_files.append(os.path.join(backgrounds_dir, bg_file))
     
+    # 最大枚数制御
+    if CFG["MAX_IMAGES"] is not None:
+        # 必要な背景画像数を計算
+        required_backgrounds = (CFG["MAX_IMAGES"] + CFG["IMAGES_PER_BACKGROUND"] - 1) // CFG["IMAGES_PER_BACKGROUND"]
+        background_files = background_files[:required_backgrounds]
+        total_estimated = min(CFG["MAX_IMAGES"], len(background_files) * CFG["IMAGES_PER_BACKGROUND"])
+        print(f"最大生成画像数: {CFG['MAX_IMAGES']}枚")
+        print(f"使用背景数: {len(background_files)}個")
+        print(f"推定生成画像数: {total_estimated}枚")
+    else:
+        print(f"生成予定画像数: {len(background_files) * CFG['IMAGES_PER_BACKGROUND']}個")
+    
     print(f"見つかった吹き出し: {len(balloon_mask_pairs)}個")
     print(f"見つかった背景: {len(background_files)}個")
-    print(f"生成予定画像数: {len(background_files) * CFG['IMAGES_PER_BACKGROUND']}個")
     
     if len(balloon_mask_pairs) < CFG["NUM_BALLOONS_RANGE"][1]:
         print(f"警告: 利用可能な吹き出しが少ないです。最大配置数を{len(balloon_mask_pairs)}個に調整します。")
@@ -260,8 +277,19 @@ def main():
     for bg_idx, bg_path in enumerate(tqdm(background_files, desc="背景処理中")):
         bg_name = Path(bg_path).stem
         
-        # 1つの背景画像につき5枚生成
-        for img_idx in range(CFG["IMAGES_PER_BACKGROUND"]):
+        # 最大枚数制御：指定枚数に達したら終了
+        if CFG["MAX_IMAGES"] is not None and success_count >= CFG["MAX_IMAGES"]:
+            print(f"最大生成画像数 {CFG['MAX_IMAGES']} に達したため処理を終了します")
+            break
+        
+        # 1つの背景画像につき指定枚数生成
+        images_per_bg = CFG["IMAGES_PER_BACKGROUND"]
+        if CFG["MAX_IMAGES"] is not None:
+            # 残り枚数を計算
+            remaining_images = CFG["MAX_IMAGES"] - success_count
+            images_per_bg = min(images_per_bg, remaining_images)
+        
+        for img_idx in range(images_per_bg):
             try:
                 # ランダム複数合成実行
                 result_img, result_mask, placed_balloons = composite_random_balloons_enhanced(
@@ -284,8 +312,17 @@ def main():
                 success_count += 1
                 current_number += 1
                 
+                # 最大枚数制御：指定枚数に達したら終了
+                if CFG["MAX_IMAGES"] is not None and success_count >= CFG["MAX_IMAGES"]:
+                    print(f"最大生成画像数 {CFG['MAX_IMAGES']} に達したため処理を終了します")
+                    break
+                    
             except Exception as e:
                 print(f"✗ 合成失敗 (背景:{bg_name}, {img_idx+1}枚目): {e}")
+        
+        # 外側ループからも抜ける
+        if CFG["MAX_IMAGES"] is not None and success_count >= CFG["MAX_IMAGES"]:
+            break
     
     print(f"\n合成完了: {success_count}個の画像を生成しました")
     print(f"出力ディレクトリ: {output_dir}")
