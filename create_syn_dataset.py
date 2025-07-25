@@ -254,19 +254,19 @@ def main():
     # パス設定
     balloons_dir = "generated_balloons"
     masks_dir = "masks"
-    backgrounds_dir = "generated_backs"
+    backgrounds_dir = "generated_double_backs"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "syn1000_dataset"
+    final_output_dir = "syn_mihiraki200_dataset"
     
     # 設定
     CFG = {
-        "SCALE_RANGE": (0.1, 0.4),          # 吹き出しのスケール範囲
-        "NUM_BALLOONS_RANGE": (2, 10),      # 配置する吹き出し数の範囲
+        "SCALE_RANGE": (0.1, 0.3),          # 吹き出しのスケール範囲
+        "NUM_BALLOONS_RANGE": (2, 7),      # 配置する吹き出し数の範囲
         "TARGET_TOTAL_IMAGES": 200,         # 目標総画像数
         "MAX_ATTEMPTS": 200,                # 配置試行回数の上限
         "BALLOON_SPLIT_RATIO": 0.8,         # 吹き出しのtrain:val比率
-        "SEED": 42,
+        "SEED": 41,
     }
     
     # ディレクトリ作成
@@ -311,18 +311,6 @@ def main():
     print(f"train用吹き出し: {len(train_balloons)}個")
     print(f"val用吹き出し: {len(val_balloons)}個")
     
-    # 背景もtrain/valに分割
-    random.seed(CFG["SEED"])
-    shuffled_backgrounds = background_files.copy()
-    random.shuffle(shuffled_backgrounds)
-    
-    bg_split_point = int(len(shuffled_backgrounds) * CFG["BALLOON_SPLIT_RATIO"])
-    train_backgrounds = shuffled_backgrounds[:bg_split_point]
-    val_backgrounds = shuffled_backgrounds[bg_split_point:]
-    
-    print(f"train用背景: {len(train_backgrounds)}個")
-    print(f"val用背景: {len(val_backgrounds)}個")
-    
     # 目標画像数を計算
     train_target = int(CFG["TARGET_TOTAL_IMAGES"] * CFG["BALLOON_SPLIT_RATIO"])
     val_target = CFG["TARGET_TOTAL_IMAGES"] - train_target
@@ -339,7 +327,7 @@ def main():
     os.makedirs(train_temp_mask_dir, exist_ok=True)
     
     train_count = generate_dataset_split(
-        train_backgrounds, train_balloons,
+        background_files, train_balloons,
         train_temp_img_dir, train_temp_mask_dir, "train", train_target, CFG
     )
     
@@ -350,7 +338,7 @@ def main():
     os.makedirs(val_temp_mask_dir, exist_ok=True)
     
     val_count = generate_dataset_split(
-        val_backgrounds, val_balloons,
+        background_files, val_balloons,
         val_temp_img_dir, val_temp_mask_dir, "val", val_target, CFG
     )
     

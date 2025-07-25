@@ -15,7 +15,7 @@ from train_unet_split import (  # 既存実装を再利用
 # --------------------- 設定 ---------------------- #
 CFG = {
     # ★ ① 新しいデータセットルート
-    "ROOT":        Path("real_dataset_real_unet_03"),   # train/val 構造は同じにする
+    "ROOT":        Path("syn_mihiraki500_dataset"),   # train/val 構造は同じにする
     "IMG_SIZE":    512,
 
     # ★ ② ハイパーパラメータ（微調整用に小さめ）
@@ -31,7 +31,7 @@ CFG = {
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
-    "RESUME":      "models/syn-unet-05.pt",
+    "RESUME":      "models/real-unet-03.pt",
 
     "MODELS_DIR":  Path("models"),
 
