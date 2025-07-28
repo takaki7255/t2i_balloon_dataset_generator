@@ -9,6 +9,9 @@ import os
 import random
 import shutil
 from tqdm import tqdm
+import json
+from datetime import datetime
+import re
 
 def regions_overlap(region1: tuple, region2: tuple) -> bool:
     """2つの領域が重複するかチェック"""
@@ -34,14 +37,115 @@ def calculate_overlap_area(region1: tuple, region2: tuple) -> int:
     
     return (overlap_x_max - overlap_x_min) * (overlap_y_max - overlap_y_min)
 
+def get_mask_bbox(mask):
+    """マスクの非ゼロ領域の境界ボックスを取得"""
+    coords = np.column_stack(np.where(mask > 0))
+    
+    if len(coords) == 0:
+        return 0, 0, mask.shape[1], mask.shape[0]
+    
+    y_min, x_min = coords.min(axis=0)
+    y_max, x_max = coords.max(axis=0)
+    
+    return x_min, y_min, x_max - x_min + 1, y_max - y_min + 1
+
+def crop_balloon_and_mask(balloon, mask):
+    """マスクの境界ボックスに基づいて吹き出し画像とマスクをクロップ"""
+    x, y, w, h = get_mask_bbox(mask)
+    
+    cropped_balloon = balloon[y:y+h, x:x+w]
+    cropped_mask = mask[y:y+h, x:x+w]
+    
+    return cropped_balloon, cropped_mask, (x, y, w, h)
+
+
+def sample_scale(bg_w: int, bw: int, cfg: dict) -> float:
+    """統計情報に基づいてスケールをサンプリング"""
+    mode = cfg.get("SCALE_MODE", "uniform")
+    if mode == "lognormal":
+        mean = cfg["SCALE_MEAN"]
+        std = cfg["SCALE_STD"]
+        clip_min, clip_max = cfg["SCALE_CLIP"]
+        mu = np.log(mean**2 / np.sqrt(std**2 + mean**2))
+        sigma = np.sqrt(np.log(1 + (std**2)/(mean**2)))
+        s = np.random.lognormal(mu, sigma)
+        return float(np.clip(s, clip_min, clip_max))
+    else:
+        return random.uniform(*cfg["SCALE_RANGE"])
+    
+def sample_num_balloons(cfg: dict, max_available: int) -> int:
+    """
+    統計情報に基づいて吹き出し個数をサンプリング
+    cfg["COUNT_PROBS"] があればその分布から取得。
+    無ければ NUM_BALLOONS_RANGE から一様サンプル。
+    """
+    lower, upper = cfg.get("NUM_BALLOONS_RANGE", (2, 10))
+    n = None
+
+    probs = cfg.get("COUNT_PROBS", None)
+    if probs is not None:
+        idx = np.arange(len(probs))
+        n = int(np.random.choice(idx, p=probs))
+
+    if n is None:
+        n = random.randint(lower, upper)
+
+    n = max(lower, n)
+    n = min(max_available, n)
+    if n <= 0:
+        n = 1
+    return n
+
+def load_count_probs(path: str, drop_zero: bool = True):
+    """
+    'N balloons: M images' 形式の統計を読み込み、確率分布を返す
+    """
+    hist = {}
+    pat = re.compile(r"^(\d+)\s+balloons:\s+(\d+)\s+images", re.I)
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            m = pat.match(line.strip())
+            if m:
+                n, freq = int(m.group(1)), int(m.group(2))
+                hist[n] = freq
+
+    if drop_zero and 0 in hist:
+        hist.pop(0)
+
+    if not hist:
+        return None
+        
+    max_n = max(hist.keys())
+    arr = np.zeros(max_n + 1, dtype=np.float32)
+    for k, v in hist.items():
+        arr[k] = v
+    probs = arr / arr.sum()
+    return probs
+
+
+def _json_default(o):
+    """JSON serialization helper"""
+    if isinstance(o, np.ndarray):
+        return o.tolist()
+    if isinstance(o, (np.integer, np.floating)):
+        return o.item()
+    if isinstance(o, Path):
+        return str(o)
+    return str(o)
+
 
 def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs: list,
                                      scale_range: tuple = (0.1, 0.4), 
                                      num_balloons_range: tuple = (2, 10),
-                                     max_attempts: int = 200) -> tuple:
+                                     max_attempts: int = 200,
+                                     cfg: dict = None) -> tuple:
     """
     1つの背景画像にランダムに選択した複数の吹き出しを重複なしで合成する
+    統計情報に基づくサンプリング対応版
     """
+    if cfg is None:
+        cfg = {}
+        
     # 背景画像読み込み
     background = cv2.imread(background_path, cv2.IMREAD_COLOR)
     if background is None:
@@ -51,10 +155,9 @@ def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs:
     result_img = background.copy()
     result_mask = np.zeros((bg_h, bg_w), dtype=np.uint8)
     
-    # 配置する吹き出し数をランダムに決定
-    min_balloons, max_balloons = num_balloons_range
-    max_balloons = min(max_balloons, len(balloon_mask_pairs))
-    num_balloons = random.randint(min_balloons, max_balloons)
+    # 配置する吹き出し数を統計情報に基づいて決定
+    max_balloons = min(num_balloons_range[1], len(balloon_mask_pairs))
+    num_balloons = sample_num_balloons(cfg, max_balloons)
     
     # ランダムに吹き出しを選択
     selected_pairs = random.sample(balloon_mask_pairs, num_balloons)
@@ -71,20 +174,32 @@ def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs:
         if balloon is None or mask is None:
             continue
         
-        original_balloon_h, original_balloon_w = balloon.shape[:2]
+        # マスクの境界ボックスでクロップ（余白除去）
+        cropped_balloon, cropped_mask, bbox = crop_balloon_and_mask(balloon, mask)
         
-        # ランダムサイズ
-        balloon_scale = random.uniform(scale_range[0], scale_range[1])
+        if cropped_balloon.size == 0 or cropped_mask.size == 0:
+            print(f"警告: クロップ結果が空 ({balloon_path})")
+            continue
+
+        # クロップされた画像のサイズでスケール計算
+        crop_h, crop_w = cropped_balloon.shape[:2]
+        
+        # 統計情報に基づくスケールサンプリング
+        try:
+            balloon_scale = sample_scale(bg_w, crop_w, cfg)
+        except KeyError:
+            balloon_scale = random.uniform(scale_range[0], scale_range[1])
+            
         new_balloon_w = int(bg_w * balloon_scale)
-        new_balloon_h = int(original_balloon_h * (new_balloon_w / original_balloon_w))
+        new_balloon_h = int(crop_h * (new_balloon_w / crop_w))
         
         # 背景サイズを超える場合はスキップ
         if new_balloon_w >= bg_w or new_balloon_h >= bg_h:
             continue
         
-        # リサイズ
-        balloon_resized = cv2.resize(balloon, (new_balloon_w, new_balloon_h))
-        mask_resized = cv2.resize(mask, (new_balloon_w, new_balloon_h))
+        # クロップされた画像をリサイズ
+        balloon_resized = cv2.resize(cropped_balloon, (new_balloon_w, new_balloon_h))
+        mask_resized = cv2.resize(cropped_mask, (new_balloon_w, new_balloon_h))
         
         # 重複を避けつつ位置を探す
         placed = False
@@ -217,13 +332,14 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
         bg_name = Path(bg_path).stem
         
         try:
-            # ランダム複数合成実行
+            # ランダム複数合成実行（統計情報対応）
             result_img, result_mask, placed_balloons = composite_random_balloons_enhanced(
                 bg_path, 
                 balloon_pairs,
                 scale_range=cfg["SCALE_RANGE"],
                 num_balloons_range=current_range,
-                max_attempts=cfg["MAX_ATTEMPTS"]
+                max_attempts=cfg["MAX_ATTEMPTS"],
+                cfg=cfg  # 統計情報パラメータを渡す
             )
             
             # ファイル保存
@@ -257,22 +373,58 @@ def main():
     backgrounds_dir = "generated_double_backs"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "syn_mihiraki200_dataset"
+    final_output_dir = "syn_mihiraki300_dataset"
     
     # 設定
     CFG = {
         "SCALE_RANGE": (0.1, 0.3),          # 吹き出しのスケール範囲
-        "NUM_BALLOONS_RANGE": (2, 7),      # 配置する吹き出し数の範囲
-        "TARGET_TOTAL_IMAGES": 200,         # 目標総画像数
-        "MAX_ATTEMPTS": 200,                # 配置試行回数の上限
-        "BALLOON_SPLIT_RATIO": 0.8,         # 吹き出しのtrain:val比率
-        "SEED": 41,
+        "NUM_BALLOONS_RANGE": (2, 7),       # 1画像あたりの吹き出し数
+        "MAX_ATTEMPTS": 200,                 # 配置試行回数
+        "TARGET_TOTAL_IMAGES": 300,          # 総生成画像数
+        "TRAIN_RATIO": 0.8,                  # train用の比率
+        "BALLOON_SPLIT_SEED": 42,            # 吹き出し分割のランダムシード
+        
+        # 統計情報ベースのサンプリング設定
+        "SCALE_MODE": "lognormal",           # "uniform" or "lognormal" 
+        "SCALE_MEAN": 0.25,                  # lognormal分布のmean (SCALE_MODE="lognormal"時のみ)
+        "SCALE_STD": 0.08,                   # lognormal分布のstd (SCALE_MODE="lognormal"時のみ)
+        "SCALE_CLIP": (0.05, 0.4),           # スケールのクリップ範囲
+        "COUNT_PROBS": None,                 # 吹き出し個数の確率分布 (load_count_probs()で設定可能)
+        "COUNT_STATS_FILE": "balloon_count_statistics.txt",  # 統計ファイルのパス
     }
     
     # ディレクトリ作成
     os.makedirs(temp_output_dir, exist_ok=True)
     os.makedirs(temp_mask_output_dir, exist_ok=True)
     os.makedirs(final_output_dir, exist_ok=True)
+    
+    # CFG設定をファイル出力
+    config_output = {
+        "timestamp": datetime.now().isoformat(),
+        "script_name": "create_syn_dataset.py",
+        "dataset_output_path": final_output_dir,
+        "config": CFG,
+        "input_directories": {
+            "balloons_dir": balloons_dir,
+            "masks_dir": masks_dir,
+            "backgrounds_dir": backgrounds_dir
+        }
+    }
+    
+    config_file_path = os.path.join(final_output_dir, "config.json")
+    with open(config_file_path, 'w', encoding='utf-8') as f:
+        json.dump(config_output, f, ensure_ascii=False, indent=2, default=_json_default)
+    print(f"設定情報を保存: {config_file_path}")
+    
+    # 統計情報ファイルの読み込み（オプション）
+    if CFG.get("COUNT_STATS_FILE") and os.path.exists(CFG["COUNT_STATS_FILE"]):
+        print(f"統計情報ファイルを読み込み: {CFG['COUNT_STATS_FILE']}")
+        try:
+            CFG["COUNT_PROBS"] = load_count_probs(CFG["COUNT_STATS_FILE"])
+            print(f"統計ベースの吹き出し個数サンプリングを有効化")
+        except Exception as e:
+            print(f"統計ファイル読み込みエラー: {e}")
+            print("一様サンプリングを使用します")
     
     print("=== syn_dataset 作成開始 ===")
     
@@ -301,18 +453,18 @@ def main():
     print(f"見つかった背景: {len(background_files)}個")
     
     # 吹き出しをtrain用とval用に分割
-    print(f"\n吹き出しを分割中（train:{CFG['BALLOON_SPLIT_RATIO']:.0%}, val:{1-CFG['BALLOON_SPLIT_RATIO']:.0%}）...")
+    print(f"\n吹き出しを分割中（train:{CFG['TRAIN_RATIO']:.0%}, val:{1-CFG['TRAIN_RATIO']:.0%}）...")
     train_balloons, val_balloons = split_balloons(
         balloon_mask_pairs, 
-        CFG["BALLOON_SPLIT_RATIO"], 
-        CFG["SEED"]
+        CFG["TRAIN_RATIO"], 
+        CFG["BALLOON_SPLIT_SEED"]
     )
     
     print(f"train用吹き出し: {len(train_balloons)}個")
     print(f"val用吹き出し: {len(val_balloons)}個")
     
     # 目標画像数を計算
-    train_target = int(CFG["TARGET_TOTAL_IMAGES"] * CFG["BALLOON_SPLIT_RATIO"])
+    train_target = int(CFG["TARGET_TOTAL_IMAGES"] * CFG["TRAIN_RATIO"])
     val_target = CFG["TARGET_TOTAL_IMAGES"] - train_target
     
     print(f"\n目標画像数:")
@@ -381,15 +533,32 @@ def main():
     print(f"出力先: {final_output_dir}")
     print(f"総生成画像数: {train_count + val_count}枚")
     
+    # 統計情報を収集
+    stats = {
+        "total_images": train_count + val_count,
+        "train_images": train_count,
+        "val_images": val_count,
+        "train_balloons_used": len(train_balloons),
+        "val_balloons_used": len(val_balloons),
+        "total_backgrounds_available": len(background_files),
+        "total_balloon_pairs_available": len(balloon_mask_pairs)
+    }
+    
     for split in ["train", "val"]:
         img_count = len(list(Path(final_output_dir).glob(f"{split}/images/*.png")))
         mask_count = len(list(Path(final_output_dir).glob(f"{split}/masks/*.png")))
         print(f"{split}: {img_count} 画像, {mask_count} マスク")
     
+    # 統計情報をconfig.jsonに追加
+    config_output["statistics"] = stats
+    with open(config_file_path, 'w', encoding='utf-8') as f:
+        json.dump(config_output, f, ensure_ascii=False, indent=2, default=_json_default)
+    
     print(f"\n=== 吹き出し使用状況 ===")
     print(f"train用吹き出し: {len(train_balloons)}個")
     print(f"val用吹き出し: {len(val_balloons)}個")
     print(f"重複なし: train と val で異なる吹き出しを使用")
+    print(f"設定・統計情報: {config_file_path}")
 
 
 if __name__ == "__main__":

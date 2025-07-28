@@ -1,0 +1,70 @@
+Balloon Count Statistics per Image
+==================================================
+Total images analyzed: 10619
+Total balloon annotations: 130180
+Images with balloons: 9916
+Images without balloons: 703
+
+Balloon Count Statistics:
+Mean: 12.259158
+Median: 12.000000
+Standard deviation: 6.980222
+Min: 0
+Max: 44
+25th percentile: 7.00
+75th percentile: 17.00
+
+Distribution by Balloon Count:
+0 balloons: 703 images (6.6%)
+1 balloons: 139 images (1.3%)
+2 balloons: 200 images (1.9%)
+3 balloons: 220 images (2.1%)
+4 balloons: 291 images (2.7%)
+5 balloons: 317 images (3.0%)
+6 balloons: 370 images (3.5%)
+7 balloons: 464 images (4.4%)
+8 balloons: 487 images (4.6%)
+9 balloons: 534 images (5.0%)
+10 balloons: 552 images (5.2%)
+11 balloons: 613 images (5.8%)
+12 balloons: 667 images (6.3%)
+13 balloons: 569 images (5.4%)
+14 balloons: 563 images (5.3%)
+15 balloons: 567 images (5.3%)
+16 balloons: 553 images (5.2%)
+17 balloons: 457 images (4.3%)
+18 balloons: 419 images (3.9%)
+19 balloons: 360 images (3.4%)
+20 balloons: 296 images (2.8%)
+21 balloons: 250 images (2.4%)
+22 balloons: 210 images (2.0%)
+23 balloons: 194 images (1.8%)
+24 balloons: 153 images (1.4%)
+25 balloons: 111 images (1.0%)
+26 balloons: 88 images (0.8%)
+27 balloons: 71 images (0.7%)
+28 balloons: 48 images (0.5%)
+29 balloons: 44 images (0.4%)
+30 balloons: 27 images (0.3%)
+31 balloons: 32 images (0.3%)
+32 balloons: 17 images (0.2%)
+33 balloons: 12 images (0.1%)
+34 balloons: 11 images (0.1%)
+35 balloons: 3 images (0.0%)
+36 balloons: 2 images (0.0%)
+37 balloons: 2 images (0.0%)
+38 balloons: 1 images (0.0%)
+39 balloons: 1 images (0.0%)
+44 balloons: 1 images (0.0%)
+
+Top 10 Manga Titles by Image Count:
+ 1. Hamlet: 185 images, avg 13.80 balloons
+ 2. RinToSiteSippuNoNaka: 152 images, avg 8.39 balloons
+ 3. TouyouKidan: 133 images, avg 9.46 balloons
+ 4. That'sIzumiko: 127 images, avg 10.94 balloons
+ 5. EienNoWith: 125 images, avg 10.15 balloons
+ 6. RisingGirl: 121 images, avg 11.55 balloons
+ 7. KarappoHighschool: 121 images, avg 8.75 balloons
+ 8. Raphael: 117 images, avg 11.43 balloons
+ 9. Nekodama: 117 images, avg 10.63 balloons
+10. BEMADER_P: 115 images, avg 11.62 balloons
