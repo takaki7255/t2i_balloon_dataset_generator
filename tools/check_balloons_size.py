@@ -6,7 +6,7 @@ from collections import defaultdict
 import matplotlib.pyplot as plt
 
 # Path to the generated balloons directory
-balloons_dir = 'generated_balloons'
+balloons_dir = '../generated_balloons'
 
 # Check if directory exists
 if not os.path.exists(balloons_dir):

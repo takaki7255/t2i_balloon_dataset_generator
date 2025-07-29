@@ -10,14 +10,14 @@ from pathlib import Path
 import tempfile
 
 # create_syn_dataset.pyから関数をインポート
-sys.path.append('.')
+sys.path.append('..')
 from create_syn_dataset import load_count_probs, sample_num_balloons, sample_scale
 
 def test_count_probs_loading():
     """統計ファイル読み込みテスト"""
     print("=== 統計ファイル読み込みテスト ===")
     
-    stats_file = "balloon_count_statistics.txt"
+    stats_file = "../balloon_count_statistics.txt"
     if not os.path.exists(stats_file):
         print(f"統計ファイルが見つかりません: {stats_file}")
         return None
@@ -116,7 +116,7 @@ def test_config_generation():
     print("\n=== 設定ファイル生成テスト ===")
     
     # 統計情報を読み込み
-    probs = load_count_probs("balloon_count_statistics.txt")
+    probs = load_count_probs("../balloon_count_statistics.txt")
     
     test_cfg = {
         "SCALE_RANGE": (0.1, 0.3),

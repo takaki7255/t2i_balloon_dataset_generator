@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-07-28T19:39:56.742385",
+  "timestamp": "2025-07-29T12:10:33.579869",
   "script_name": "create_syn_dataset.py",
   "dataset_output_path": "syn_mihiraki300_dataset",
   "config": {
@@ -8,19 +8,19 @@
       0.3
     ],
     "NUM_BALLOONS_RANGE": [
-      2,
-      7
+      7,
+      17
     ],
     "MAX_ATTEMPTS": 200,
     "TARGET_TOTAL_IMAGES": 300,
     "TRAIN_RATIO": 0.8,
     "BALLOON_SPLIT_SEED": 42,
     "SCALE_MODE": "lognormal",
-    "SCALE_MEAN": 0.25,
-    "SCALE_STD": 0.08,
+    "SCALE_MEAN": 0.1,
+    "SCALE_STD": 0.03,
     "SCALE_CLIP": [
       0.05,
-      0.4
+      0.18
     ],
     "COUNT_PROBS": [
       0.0,

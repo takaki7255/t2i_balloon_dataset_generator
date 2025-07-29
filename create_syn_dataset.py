@@ -165,6 +165,7 @@ def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs:
     # 配置済み領域を記録する配列
     occupied_regions = []
     successfully_placed = []
+    balloon_details = []  # 詳細情報を記録
     
     for balloon_path, mask_path in selected_pairs:
         # 吹き出しとマスク読み込み
@@ -274,8 +275,21 @@ def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs:
             new_region = (x, y, x + new_balloon_w, y + new_balloon_h)
             occupied_regions.append(new_region)
             successfully_placed.append(Path(balloon_path).stem)
+            
+            # 詳細情報を記録
+            balloon_info = {
+                "balloon_file": Path(balloon_path).name,
+                "original_size": f"{balloon.shape[1]}x{balloon.shape[0]}",
+                "cropped_size": f"{crop_w}x{crop_h}",
+                "final_size": f"{new_balloon_w}x{new_balloon_h}",
+                "position": f"({x},{y})",
+                "scale": f"{balloon_scale:.3f}",
+                "scale_ratio": f"{new_balloon_w/bg_w:.3f}",
+                "crop_efficiency": f"{(crop_w*crop_h)/(balloon.shape[1]*balloon.shape[0]):.3f}"
+            }
+            balloon_details.append(balloon_info)
     
-    return result_img, result_mask, successfully_placed
+    return result_img, result_mask, successfully_placed, balloon_details
 
 
 def split_balloons(balloon_mask_pairs: list, train_ratio: float = 0.8, seed: int = 42) -> tuple:
@@ -305,7 +319,7 @@ def split_balloons(balloon_mask_pairs: list, train_ratio: float = 0.8, seed: int
 
 def generate_dataset_split(background_files: list, balloon_pairs: list, 
                           output_dir: str, mask_output_dir: str, split_name: str,
-                          target_count: int, cfg: dict) -> int:
+                          target_count: int, cfg: dict, final_output_dir: str = None) -> int:
     """
     指定されたsplit（trainまたはval）のデータセットを生成する
     """
@@ -313,6 +327,12 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
     print(f"目標画像数: {target_count}")
     print(f"背景画像数: {len(background_files)}")
     print(f"利用可能吹き出し数: {len(balloon_pairs)}")
+    
+    # ログファイルのパス（最終ディレクトリに保存）
+    if final_output_dir:
+        log_file_path = os.path.join(final_output_dir, f"{split_name}_composition_log.txt")
+    else:
+        log_file_path = os.path.join(output_dir, f"{split_name}_composition_log.txt")
     
     if len(balloon_pairs) < cfg["NUM_BALLOONS_RANGE"][1]:
         adjusted_max = len(balloon_pairs)
@@ -325,6 +345,17 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
     success_count = 0
     bg_idx = 0
     
+    # ログファイルを初期化
+    with open(log_file_path, 'w', encoding='utf-8') as log_file:
+        log_file.write(f"=== {split_name.upper()} データセット合成ログ ===\n")
+        log_file.write(f"生成時刻: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        log_file.write(f"目標画像数: {target_count}\n")
+        log_file.write(f"背景画像数: {len(background_files)}\n")
+        log_file.write(f"利用可能吹き出し数: {len(balloon_pairs)}\n")
+        log_file.write(f"吹き出し個数範囲: {current_range}\n")
+        log_file.write(f"スケールモード: {cfg.get('SCALE_MODE', 'uniform')}\n")
+        log_file.write("=" * 80 + "\n\n")
+    
     # 目標数に達するまで生成
     while success_count < target_count:
         # 背景画像を循環使用
@@ -333,7 +364,7 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
         
         try:
             # ランダム複数合成実行（統計情報対応）
-            result_img, result_mask, placed_balloons = composite_random_balloons_enhanced(
+            result_img, result_mask, placed_balloons, balloon_details = composite_random_balloons_enhanced(
                 bg_path, 
                 balloon_pairs,
                 scale_range=cfg["SCALE_RANGE"],
@@ -349,6 +380,26 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
             cv2.imwrite(output_img_path, result_img)
             cv2.imwrite(output_mask_path, result_mask)
             
+            # ログファイルに詳細情報を記録
+            with open(log_file_path, 'a', encoding='utf-8') as log_file:
+                log_file.write(f"画像 {current_number:03d}.png:\n")
+                log_file.write(f"  背景ファイル: {Path(bg_path).name}\n")
+                log_file.write(f"  背景サイズ: {result_img.shape[1]}x{result_img.shape[0]}\n")
+                log_file.write(f"  配置した吹き出し数: {len(balloon_details)}\n")
+                log_file.write(f"  合成成功数: {len(placed_balloons)}\n")
+                
+                for i, detail in enumerate(balloon_details, 1):
+                    log_file.write(f"    吹き出し{i}: {detail['balloon_file']}\n")
+                    log_file.write(f"      元サイズ: {detail['original_size']}\n")
+                    log_file.write(f"      クロップ後: {detail['cropped_size']}\n")
+                    log_file.write(f"      最終サイズ: {detail['final_size']}\n")
+                    log_file.write(f"      配置位置: {detail['position']}\n")
+                    log_file.write(f"      スケール値: {detail['scale']}\n")
+                    log_file.write(f"      画面幅比: {detail['scale_ratio']}\n")
+                    log_file.write(f"      クロップ効率: {detail['crop_efficiency']}\n")
+                
+                log_file.write("\n")
+            
             success_count += 1
             current_number += 1
             
@@ -357,10 +408,14 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
             
         except Exception as e:
             print(f"✗ 合成失敗 (背景:{bg_name}): {e}")
+            # エラーもログに記録
+            with open(log_file_path, 'a', encoding='utf-8') as log_file:
+                log_file.write(f"❌ 合成失敗: {bg_name} - {str(e)}\n\n")
         
         bg_idx += 1
     
     print(f"✅ {split_name} 完了: {success_count}個の画像を生成")
+    print(f"📄 詳細ログ: {log_file_path}")
     return success_count
 
 
@@ -378,17 +433,17 @@ def main():
     # 設定
     CFG = {
         "SCALE_RANGE": (0.1, 0.3),          # 吹き出しのスケール範囲
-        "NUM_BALLOONS_RANGE": (2, 7),       # 1画像あたりの吹き出し数
+        "NUM_BALLOONS_RANGE": (7, 17),      # 実際の統計の25-75%範囲に合わせて調整
         "MAX_ATTEMPTS": 200,                 # 配置試行回数
-        "TARGET_TOTAL_IMAGES": 300,          # 総生成画像数
+        "TARGET_TOTAL_IMAGES": 300,          # 総生成画像数（本番用に戻す）
         "TRAIN_RATIO": 0.8,                  # train用の比率
         "BALLOON_SPLIT_SEED": 42,            # 吹き出し分割のランダムシード
         
         # 統計情報ベースのサンプリング設定
         "SCALE_MODE": "lognormal",           # "uniform" or "lognormal" 
-        "SCALE_MEAN": 0.25,                  # lognormal分布のmean (SCALE_MODE="lognormal"時のみ)
-        "SCALE_STD": 0.08,                   # lognormal分布のstd (SCALE_MODE="lognormal"時のみ)
-        "SCALE_CLIP": (0.05, 0.4),           # スケールのクリップ範囲
+        "SCALE_MEAN": 0.10,                  # lognormal分布のmean (背景幅の10%に調整)
+        "SCALE_STD": 0.03,                   # lognormal分布のstd (標準偏差をさらに小さく)
+        "SCALE_CLIP": (0.05, 0.18),          # スケールのクリップ範囲（最大18%に制限）
         "COUNT_PROBS": None,                 # 吹き出し個数の確率分布 (load_count_probs()で設定可能)
         "COUNT_STATS_FILE": "balloon_count_statistics.txt",  # 統計ファイルのパス
     }
@@ -480,7 +535,7 @@ def main():
     
     train_count = generate_dataset_split(
         background_files, train_balloons,
-        train_temp_img_dir, train_temp_mask_dir, "train", train_target, CFG
+        train_temp_img_dir, train_temp_mask_dir, "train", train_target, CFG, final_output_dir
     )
     
     # val データセット生成
@@ -491,7 +546,7 @@ def main():
     
     val_count = generate_dataset_split(
         background_files, val_balloons,
-        val_temp_img_dir, val_temp_mask_dir, "val", val_target, CFG
+        val_temp_img_dir, val_temp_mask_dir, "val", val_target, CFG, final_output_dir
     )
     
     # 最終的なデータセット構造を作成
