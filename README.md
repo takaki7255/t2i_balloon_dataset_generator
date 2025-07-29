@@ -104,7 +104,7 @@ python dataset_quality_analyzer.py
 
 ### 3. モデル学習
 ```bash
-python train_unet_balloon.py
+python train_unet_split.py
 ```
 
 ### 4. モデル評価
