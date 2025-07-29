@@ -19,7 +19,7 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # ------- 必ず書き換える -------------
-    "MODEL_TAG":   "real-unet-03-new_finetune-best",     # 例： models/real-unet-01.pt
+    "MODEL_TAG":   "syn_mihiraki300-unet-01",     # 例： models/real-unet-01.pt
     "DATA_ROOT":   Path("test_dataset"),  # images, masks が入ったテストデータセット
     # ----------------------------------
     "IMG_SIZE":    512,
