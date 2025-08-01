@@ -1,0 +1,32 @@
+{
+  "model_tag": "syn_mihiraki1000-unet-01",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-08-01T11:29:36.863110",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.7363166225024718,
+      "iou": 0.611502506397079,
+      "precision": 0.659145274900129,
+      "recall": 0.8856342649775496,
+      "f1_score": 0.7363165754002453
+    },
+    "global_metrics": {
+      "dice": 0.7760877642887922,
+      "iou": 0.634104098026124,
+      "precision": 0.6794511809401791,
+      "recall": 0.9047710028854916,
+      "f1_score": 0.7760877153002158,
+      "accuracy": 0.9411057281494104
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.17941030455411555,
+    "iou_std": 0.20556998396870713,
+    "precision_std": 0.22042270108461176,
+    "recall_std": 0.12867846135361782,
+    "f1_std": 0.17941030096638727
+  }
+}

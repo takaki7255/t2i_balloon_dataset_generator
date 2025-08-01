@@ -1,0 +1,32 @@
+{
+  "model_tag": "syn_mihiraki750-unet-01-finetune100_dataset-best",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-08-01T17:01:02.608973",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.906497399084258,
+      "iou": 0.8456925265780924,
+      "precision": 0.9086073279984587,
+      "recall": 0.9103593562007055,
+      "f1_score": 0.9064973492799211
+    },
+    "global_metrics": {
+      "dice": 0.9242175321025338,
+      "iou": 0.8591119112666388,
+      "precision": 0.9254173307579667,
+      "recall": 0.9230208404839845,
+      "f1_score": 0.9242174821026048,
+      "accuracy": 0.982924499511715
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.11933084185627486,
+    "iou_std": 0.1554842159390934,
+    "precision_std": 0.12156563400111865,
+    "recall_std": 0.13108138220395,
+    "f1_std": 0.11933084157800457
+  }
+}

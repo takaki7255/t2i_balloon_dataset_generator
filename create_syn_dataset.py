@@ -428,16 +428,16 @@ def main():
     backgrounds_dir = "generated_double_backs"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "syn_mihiraki300_dataset"
+    final_output_dir = "syn_mihiraki1500_dataset01"
     
     # 設定
     CFG = {
         "SCALE_RANGE": (0.1, 0.3),          # 吹き出しのスケール範囲
         "NUM_BALLOONS_RANGE": (7, 17),      # 実際の統計の25-75%範囲に合わせて調整
         "MAX_ATTEMPTS": 200,                 # 配置試行回数
-        "TARGET_TOTAL_IMAGES": 300,          # 総生成画像数（本番用に戻す）
+        "TARGET_TOTAL_IMAGES": 1500,          # 総生成画像数（本番用に戻す）
         "TRAIN_RATIO": 0.8,                  # train用の比率
-        "BALLOON_SPLIT_SEED": 42,            # 吹き出し分割のランダムシード
+        "BALLOON_SPLIT_SEED": 10,            # 吹き出し分割のランダムシード
         
         # 統計情報ベースのサンプリング設定
         "SCALE_MODE": "lognormal",           # "uniform" or "lognormal" 

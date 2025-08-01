@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn_mihiraki750-unet-01-new_finetune-best
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-08-01 16:36:07
+
+Average Metrics (per image):
+  Dice Score: 0.8940 ± 0.1262
+  IoU:        0.8273 ± 0.1681
+  Precision:  0.9106 ± 0.1249
+  Recall:     0.8903 ± 0.1412
+  F1 Score:   0.8940 ± 0.1262
+
+Global Metrics (all pixels):
+  Dice Score: 0.9169
+  IoU:        0.8466
+  Precision:  0.9253
+  Recall:     0.9087
+  F1 Score:   0.9169
+  Accuracy:   0.9814

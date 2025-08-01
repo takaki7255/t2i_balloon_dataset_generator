@@ -15,23 +15,23 @@ from train_unet_split import (  # 既存実装を再利用
 # --------------------- 設定 ---------------------- #
 CFG = {
     # ★ ① 新しいデータセットルート
-    "ROOT":        Path("syn_mihiraki500_dataset"),   # train/val 構造は同じにする
+    "ROOT":        Path("real_dataset_real_unet_03"),   # train/val 構造は同じにする
     "IMG_SIZE":    512,
 
     # ★ ② ハイパーパラメータ（微調整用に小さめ）
     "BATCH":       4,
-    "EPOCHS":      100,
+    "EPOCHS":      50,
     "LR":          1e-5,
-    "PATIENCE":    8,
+    "PATIENCE":    5,
     "SEED":        42,
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "new_finetune",
+    "DATASET":     "real_dataset_real_unet_03",
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
-    "RESUME":      "models/real-unet-03.pt",
+    "RESUME":      "models/syn_mihiraki750-unet-01.pt",
 
     "MODELS_DIR":  Path("models"),
 

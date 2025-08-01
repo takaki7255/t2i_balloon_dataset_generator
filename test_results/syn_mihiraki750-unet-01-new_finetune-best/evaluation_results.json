@@ -1,0 +1,32 @@
+{
+  "model_tag": "syn_mihiraki750-unet-01-new_finetune-best",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-08-01T16:36:07.400184",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8940277099498758,
+      "iou": 0.8273294249024451,
+      "precision": 0.9105558152905637,
+      "recall": 0.8902667258618987,
+      "f1_score": 0.8940276603964041
+    },
+    "global_metrics": {
+      "dice": 0.9169317806669508,
+      "iou": 0.8466057486495125,
+      "precision": 0.9253048581024412,
+      "recall": 0.9087088801244934,
+      "f1_score": 0.916931730671032,
+      "accuracy": 0.9814266586303674
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.1261678623375362,
+    "iou_std": 0.16807159471025615,
+    "precision_std": 0.12494842720056364,
+    "recall_std": 0.1411593338669839,
+    "f1_std": 0.12616786131218116
+  }
+}
