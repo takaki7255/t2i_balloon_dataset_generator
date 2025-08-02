@@ -1,0 +1,20 @@
+Balloon Size Ratio Statistics (Images with Balloons Only)
+============================================================
+Total balloon annotations: 130180
+Images with balloons: 9916
+
+Ratio Statistics:
+Mean: 0.008769
+Median: 0.007226
+Standard deviation: 0.006773
+Min: 0.000011
+Max: 0.283788
+25th percentile: 0.004381
+75th percentile: 0.011281
+
+Area Statistics (pixels):
+Mean: 17323.96
+Median: 14092.00
+Standard deviation: 13971.53
+Min: 51.00
+Max: 549180.00
