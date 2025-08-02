@@ -1,8 +1,10 @@
 {
-  "timestamp": "2025-08-02T15:44:16.533496",
+  "timestamp": "2025-08-02T17:01:44.492216",
   "script_name": "create_syn_dataset_aug.py",
-  "dataset_output_path": "syn_mihiraki_dataset_aug",
+  "dataset_output_path": "sample_aug_dataset",
   "config": {
+    "TARGET_NORMAL_IMAGES": 100,
+    "TARGET_AUGMENTED_IMAGES": 100,
     "TARGET_TOTAL_IMAGES": 200,
     "MAX_ATTEMPTS": 200,
     "BALLOON_SPLIT_RATIO": 0.8,
@@ -95,15 +97,29 @@
     "backgrounds_dir": "generated_double_backs"
   },
   "augmentation_info": {
-    "horizontal_flip": "水平反転",
-    "rotation": "回転（角度範囲指定）",
-    "cut_edge": "端の切り取り",
-    "thin_line": "線の太さを細くする（侵食処理）"
+    "description": "通常合成とデータ拡張を組み合わせたデータセット",
+    "normal_augmentation": "なし（オリジナルの面積ベースリサイズのみ）",
+    "augmentation_types": {
+      "horizontal_flip": "水平反転",
+      "rotation": "回転（角度範囲指定）",
+      "cut_edge": "端の切り取り",
+      "thin_line": "線の太さを細くする（侵食処理）"
+    },
+    "file_naming": {
+      "normal": "XXXX_normal.png (拡張なし)",
+      "augmented": "XXXX_aug.png (拡張適用)"
+    }
   },
   "statistics": {
     "total_images": 200,
+    "normal_images": 100,
+    "augmented_images": 100,
     "train_images": 160,
+    "train_normal": 80,
+    "train_augmented": 80,
     "val_images": 40,
+    "val_normal": 20,
+    "val_augmented": 20,
     "train_balloons_used": 84,
     "val_balloons_used": 21,
     "train_backgrounds_used": 41,

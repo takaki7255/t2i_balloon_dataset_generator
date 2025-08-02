@@ -32,6 +32,11 @@ def augment_balloon_and_mask(balloon: np.ndarray,
         CUT_EDGE_RATIO=(0.05, 0.20),
         THIN_LINE_PROB=0.5,
         THIN_PIXELS=(1, 3),
+        # ===== コマ角・辺の形状変更（新機能） =====
+        PANEL_CORNER_PROB=0.3,           # コマ角四角形化確率
+        PANEL_CORNER_RATIO=(0.05, 0.15), # 角切り落としサイズ比率（5-15%）
+        PANEL_EDGE_PROB=0.25,            # コマ辺直線化確率  
+        PANEL_EDGE_RATIO=(0.30, 0.70),   # 辺直線化範囲比率（30-70%）
     )
     if cfg is None: cfg = {}
     for k, v in defaults.items():
@@ -97,12 +102,141 @@ def augment_balloon_and_mask(balloon: np.ndarray,
         if mask.sum() == 0:
             mask = eroded = cv2.dilate(mask, kernel, iterations=1)
 
+    # ---------- 5. Panel corner squaring (コマ角四角形化) ----------
+    if random.random() < cfg["PANEL_CORNER_PROB"]:
+        balloon, mask = apply_panel_corner_squaring(balloon, mask, cfg)
+
+    # ---------- 6. Panel edge straightening (コマ辺直線化) ----------
+    if random.random() < cfg["PANEL_EDGE_PROB"]:
+        balloon, mask = apply_panel_edge_straightening(balloon, mask, cfg)
+
+    return balloon, mask
+
+def apply_panel_corner_squaring(balloon: np.ndarray, mask: np.ndarray, cfg: dict):
+    """
+    コマ角四角形化処理（シンプル版）
+    指定された角の近くの辺を切り落として自然に直角を作る
+    """
+    h, w = mask.shape
+    
+    # 角を選択
+    corner = random.choice(["top-left", "top-right", "bottom-left", "bottom-right"])
+    
+    # 切り落とし幅を決定（画像の5-15%程度）
+    cut_ratio = random.uniform(*cfg["PANEL_CORNER_RATIO"])
+    
+    if corner == "top-left":
+        # 左上角：上側と左側を切り落とす
+        top_cut = int(h * cut_ratio * random.uniform(0.5, 1.5))
+        left_cut = int(w * cut_ratio * random.uniform(0.5, 1.5))
+        
+        # 上側切り落とし
+        balloon[:top_cut, :] = 255
+        mask[:top_cut, :] = 0
+        
+        # 左側切り落とし
+        balloon[:, :left_cut] = 255
+        mask[:, :left_cut] = 0
+        
+    elif corner == "top-right":
+        # 右上角：上側と右側を切り落とす
+        top_cut = int(h * cut_ratio * random.uniform(0.5, 1.5))
+        right_cut = int(w * cut_ratio * random.uniform(0.5, 1.5))
+        
+        # 上側切り落とし
+        balloon[:top_cut, :] = 255
+        mask[:top_cut, :] = 0
+        
+        # 右側切り落とし
+        balloon[:, w-right_cut:] = 255
+        mask[:, w-right_cut:] = 0
+        
+    elif corner == "bottom-left":
+        # 左下角：下側と左側を切り落とす
+        bottom_cut = int(h * cut_ratio * random.uniform(0.5, 1.5))
+        left_cut = int(w * cut_ratio * random.uniform(0.5, 1.5))
+        
+        # 下側切り落とし
+        balloon[h-bottom_cut:, :] = 255
+        mask[h-bottom_cut:, :] = 0
+        
+        # 左側切り落とし
+        balloon[:, :left_cut] = 255
+        mask[:, :left_cut] = 0
+        
+    else:  # bottom-right
+        # 右下角：下側と右側を切り落とす
+        bottom_cut = int(h * cut_ratio * random.uniform(0.5, 1.5))
+        right_cut = int(w * cut_ratio * random.uniform(0.5, 1.5))
+        
+        # 下側切り落とし
+        balloon[h-bottom_cut:, :] = 255
+        mask[h-bottom_cut:, :] = 0
+        
+        # 右側切り落とし
+        balloon[:, w-right_cut:] = 255
+        mask[:, w-right_cut:] = 0
+    
+    return balloon, mask
+
+def apply_panel_edge_straightening(balloon: np.ndarray, mask: np.ndarray, cfg: dict):
+    """
+    コマ辺直線化処理（シンプル版）
+    指定された辺の一部を切り落とす
+    """
+    h, w = mask.shape
+    
+    # 辺を選択
+    edge = random.choice(["left", "right", "top", "bottom"])
+    
+    # 切り落とし範囲を決定
+    straight_ratio = random.uniform(*cfg["PANEL_EDGE_RATIO"])
+    cut_depth_ratio = random.uniform(0.03, 0.08)  # 切り落とし深さ（3-8%）
+    
+    if edge == "left":
+        # 左辺を直線化：左側を切り落とす
+        cut_width = int(w * cut_depth_ratio)
+        start_y = int(h * (1 - straight_ratio) / 2)
+        end_y = int(h * (1 + straight_ratio) / 2)
+        
+        balloon[start_y:end_y, :cut_width] = 255
+        mask[start_y:end_y, :cut_width] = 0
+        
+    elif edge == "right":
+        # 右辺を直線化：右側を切り落とす
+        cut_width = int(w * cut_depth_ratio)
+        start_y = int(h * (1 - straight_ratio) / 2)
+        end_y = int(h * (1 + straight_ratio) / 2)
+        
+        balloon[start_y:end_y, w-cut_width:] = 255
+        mask[start_y:end_y, w-cut_width:] = 0
+        
+    elif edge == "top":
+        # 上辺を直線化：上側を切り落とす
+        cut_height = int(h * cut_depth_ratio)
+        start_x = int(w * (1 - straight_ratio) / 2)
+        end_x = int(w * (1 + straight_ratio) / 2)
+        
+        balloon[:cut_height, start_x:end_x] = 255
+        mask[:cut_height, start_x:end_x] = 0
+        
+    else:  # bottom
+        # 下辺を直線化：下側を切り落とす
+        cut_height = int(h * cut_depth_ratio)
+        start_x = int(w * (1 - straight_ratio) / 2)
+        end_x = int(w * (1 + straight_ratio) / 2)
+        
+        balloon[h-cut_height:, start_x:end_x] = 255
+        mask[h-cut_height:, start_x:end_x] = 0
+    
     return balloon, mask
 
 def sample_scale(bg_w: int, bw: int, cfg: dict) -> float:
+    """統計情報に基づいてスケールをサンプリング"""
     mode = cfg.get("SCALE_MODE", "uniform")
     if mode == "lognormal":
-        mean = cfg["SCALE_MEAN"]; std = cfg["SCALE_STD"]
+        mean = cfg["SCALE_MEAN"]
+        std = cfg["SCALE_STD"]
         clip_min, clip_max = cfg["SCALE_CLIP"]
         mu = np.log(mean**2 / np.sqrt(std**2 + mean**2))
         sigma = np.sqrt(np.log(1 + (std**2)/(mean**2)))
@@ -110,6 +244,50 @@ def sample_scale(bg_w: int, bw: int, cfg: dict) -> float:
         return float(np.clip(s, clip_min, clip_max))
     else:
         return random.uniform(*cfg["SCALE_RANGE"])
+
+def calculate_area_based_size(crop_w: int, crop_h: int, bg_w: int, bg_h: int, 
+                             target_scale: float, max_w_ratio: float = 0.3, 
+                             max_h_ratio: float = 0.4) -> tuple:
+    """
+    面積ベースのリサイズサイズ計算（アスペクト比による不平等を解消）
+    
+    Args:
+        crop_w, crop_h: クロップ後の吹き出しサイズ
+        bg_w, bg_h: 背景画像サイズ
+        target_scale: 目標スケール値（面積比の平方根）
+        max_w_ratio: 最大幅比率（背景幅に対する）
+        max_h_ratio: 最大高さ比率（背景高さに対する）
+    
+    Returns:
+        (new_w, new_h): 調整されたサイズ
+    """
+    # 面積ベースの目標サイズ計算
+    bg_area = bg_w * bg_h
+    target_area = bg_area * (target_scale ** 2)  # スケールの2乗で面積を決定
+    
+    aspect_ratio = crop_h / crop_w
+    
+    # アスペクト比を維持した理想サイズ
+    ideal_w = int(np.sqrt(target_area / aspect_ratio))
+    ideal_h = int(np.sqrt(target_area * aspect_ratio))
+    
+    # 最大サイズ制限
+    max_w = int(bg_w * max_w_ratio)
+    max_h = int(bg_h * max_h_ratio)
+    
+    # 制限に合わせて調整
+    scale_by_w = max_w / ideal_w if ideal_w > max_w else 1.0
+    scale_by_h = max_h / ideal_h if ideal_h > max_h else 1.0
+    adjust_scale = min(scale_by_w, scale_by_h)
+    
+    new_w = int(ideal_w * adjust_scale)
+    new_h = int(ideal_h * adjust_scale)
+    
+    # 最小サイズ確保
+    new_w = max(new_w, 20)
+    new_h = max(new_h, 20)
+    
+    return new_w, new_h
     
 def sample_num_balloons(cfg: dict, max_available: int) -> int:
     """
@@ -232,7 +410,8 @@ def composite_random_balloons_enhanced(
         scale_range: Tuple[float, float] = (0.1, 0.4),
         num_balloons_range: Tuple[int, int] = (2, 10),
         max_attempts: int = 200,
-        aug_cfg: dict = None) -> Tuple[np.ndarray, np.ndarray, List[str]]:
+        aug_cfg: dict = None,
+        apply_augmentation: bool = True) -> Tuple[np.ndarray, np.ndarray, List[str]]:
 
     if aug_cfg is None:
         aug_cfg = {}
@@ -259,9 +438,10 @@ def composite_random_balloons_enhanced(
             continue
 
         # ----------- augmentation here ------------------------------------- #
-        balloon, mask = augment_balloon_and_mask(balloon, mask, aug_cfg)
-        if mask.sum() == 0:          # マスクが消滅したらスキップ
-            continue
+        if apply_augmentation:
+            balloon, mask = augment_balloon_and_mask(balloon, mask, aug_cfg)
+            if mask.sum() == 0:          # マスクが消滅したらスキップ
+                continue
         # ------------------------------------------------------------------ #
 
         # マスクの境界ボックスでクロップ（余白除去）
@@ -273,12 +453,19 @@ def composite_random_balloons_enhanced(
 
         # クロップされた画像のサイズでスケール計算
         crop_h, crop_w = cropped_balloon.shape[:2]
+        
+        # 統計情報に基づくスケールサンプリング
         try:
-            scale = sample_scale(bg_w, crop_w, aug_cfg)  # クロップ後の幅を基準
+            scale = sample_scale(bg_w, crop_w, aug_cfg)
         except KeyError:
             scale = random.uniform(*scale_range)
-        new_w = int(bg_w * scale)
-        new_h = int(crop_h * (new_w / crop_w))  # クロップ後のアスペクト比を維持
+        
+        # 面積ベースのサイズ計算（アスペクト比による不平等を解消）
+        new_w, new_h = calculate_area_based_size(
+            crop_w, crop_h, bg_w, bg_h, scale,
+            max_w_ratio=aug_cfg.get("MAX_WIDTH_RATIO", 0.3),
+            max_h_ratio=aug_cfg.get("MAX_HEIGHT_RATIO", 0.4)
+        )
         if new_w >= bg_w or new_h >= bg_h:
             continue
 
@@ -338,13 +525,18 @@ def split_balloons(balloon_mask_pairs, train_ratio=0.8, seed=42):
 
 def generate_dataset_split(background_files, balloon_pairs,
                            output_dir, mask_output_dir, split_name,
-                           target_count, cfg):
-    print(f"\n=== {split_name} 生成 ({target_count} 枚目標) ===")
+                           normal_count, augmented_count, cfg):
+    total_count = normal_count + augmented_count
+    print(f"\n=== {split_name} 生成 (通常: {normal_count}枚, 拡張: {augmented_count}枚, 合計: {total_count}枚) ===")
+    
     num = 1
     bg_idx = 0
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(mask_output_dir, exist_ok=True)
-    while num <= target_count:
+    
+    # 通常合成（拡張なし）
+    print(f"  通常合成を生成中...")
+    while num <= normal_count:
         bg_path = background_files[bg_idx % len(background_files)]
         try:
             img, msk, _ = composite_random_balloons_enhanced(
@@ -352,54 +544,93 @@ def generate_dataset_split(background_files, balloon_pairs,
                 scale_range=cfg["SCALE_RANGE"],
                 num_balloons_range=cfg["NUM_BALLOONS_RANGE"],
                 max_attempts=cfg["MAX_ATTEMPTS"],
-                aug_cfg=cfg  # 追加
+                aug_cfg=cfg,
+                apply_augmentation=False  # 拡張なし
             )
-            cv2.imwrite(os.path.join(output_dir, f"{num:04d}.png"), img)
-            cv2.imwrite(os.path.join(mask_output_dir, f"{num:04d}_mask.png"), msk)
+            cv2.imwrite(os.path.join(output_dir, f"{num:04d}_normal.png"), img)
+            cv2.imwrite(os.path.join(mask_output_dir, f"{num:04d}_normal_mask.png"), msk)
             if num % 10 == 0:
-                print(f"  {num}/{target_count} done")
+                print(f"    通常: {num}/{normal_count} done")
             num += 1
         except Exception as e:
-            print(f"✗ 合成失敗: {e}")
+            print(f"✗ 通常合成失敗: {e}")
         bg_idx += 1
-    print(f"✅ {split_name} 完了\n")
+    
+    # 拡張適用合成
+    print(f"  拡張適用合成を生成中...")
+    aug_num = 1
+    while aug_num <= augmented_count:
+        bg_path = background_files[bg_idx % len(background_files)]
+        try:
+            img, msk, _ = composite_random_balloons_enhanced(
+                bg_path, balloon_pairs,
+                scale_range=cfg["SCALE_RANGE"],
+                num_balloons_range=cfg["NUM_BALLOONS_RANGE"],
+                max_attempts=cfg["MAX_ATTEMPTS"],
+                aug_cfg=cfg,
+                apply_augmentation=True  # 拡張適用
+            )
+            total_num = normal_count + aug_num
+            cv2.imwrite(os.path.join(output_dir, f"{total_num:04d}_aug.png"), img)
+            cv2.imwrite(os.path.join(mask_output_dir, f"{total_num:04d}_aug_mask.png"), msk)
+            if aug_num % 10 == 0:
+                print(f"    拡張: {aug_num}/{augmented_count} done")
+            aug_num += 1
+        except Exception as e:
+            print(f"✗ 拡張合成失敗: {e}")
+        bg_idx += 1
+    
+    print(f"✅ {split_name} 完了 (通常: {normal_count}枚, 拡張: {augmented_count}枚)\n")
 
 # ------------------------------ main --------------------------------------- #
 def main():
     balloons_dir = "generated_balloons"
     masks_dir = "masks"
     backgrounds_dir = "generated_double_backs"
-    out_root = "syn_mihiraki_dataset_aug"
+    out_root = "sample_aug_dataset"
 
     CFG = {
-    # ===== 基本設定 =====
-    "TARGET_TOTAL_IMAGES": 200,       # テスト用に少なく設定
-    "MAX_ATTEMPTS": 200,
-    "BALLOON_SPLIT_RATIO": 0.8,
-    "SEED": 42,
+        # ===== 基本設定 =====
+        "TARGET_NORMAL_IMAGES": 100,      # 通常合成（拡張なし）の枚数
+        "TARGET_AUGMENTED_IMAGES": 100,   # データ拡張適用の枚数
+        "TARGET_TOTAL_IMAGES": 200,       # 合計枚数（上記2つの合計）
+        "MAX_ATTEMPTS": 200,
+        "BALLOON_SPLIT_RATIO": 0.8,
+        "SEED": 42,
 
-    # ===== 個数（統計利用） =====
-    "COUNT_STATS_FILE": "balloon_count_statistics.txt",  # 実測ヒストのファイル
-    "COUNT_PROBS": None,          # ← main() で読み込んで埋める
-    "NUM_BALLOONS_RANGE": (7, 17),# フォールバック or クリップ用の下限/上限
+        # ===== 個数（統計データに基づいて最適化） =====
+        "COUNT_STATS_FILE": "balloon_count_statistics.txt",  # 実測ヒストのファイル
+        "COUNT_PROBS": None,              # ← main() で読み込んで埋める
+        "NUM_BALLOONS_RANGE": (9, 17),    # 統計で7個は1.4%と稀少なため9個から開始
 
-    # ===== サイズ（統計利用したい場合） =====
-    # ログ正規分布でサンプリングする設定
-    "SCALE_MODE": "lognormal",    # "uniform" なら従来通り
-    "SCALE_MEAN": 0.072,          # 横幅比の平均
-    "SCALE_STD":  0.035,          # 横幅比の標準偏差
-    "SCALE_CLIP": (0.03, 0.12),   # クリップ範囲
-    "SCALE_RANGE": (0.05, 0.09),  # フォールバック用（uniform時にも使う）
+        # ===== サイズ（実際の統計データに基づいて精密調整） =====
+        "SCALE_MODE": "lognormal",        # "uniform" なら従来通り
+        "SCALE_MEAN": 0.105,              # 実際の生成平均に合わせて微調整
+        "SCALE_STD": 0.025,               # 分散を少し大きく調整
+        "SCALE_CLIP": (0.065, 0.130),     # 実際の範囲に合わせて調整
+        "SCALE_RANGE": (0.070, 0.120),    # 実際の生成結果に基づいて範囲を調整
+        
+        # ===== 面積ベースリサイズ設定（生成結果に基づいて再調整） =====
+        "MAX_WIDTH_RATIO": 0.20,          # やや拡大して幅比を上げる
+        "MAX_HEIGHT_RATIO": 0.30,         # やや拡大して高さも調整
 
-    # ===== augmentation =====
-    "HFLIP_PROB": 0.5,
-    "ROT_PROB": 1.0,
-    "ROT_RANGE": (-20, 20),
-    "CUT_EDGE_PROB": 0.4,
-    "CUT_EDGE_RATIO": (0.05, 0.20),
-    "THIN_LINE_PROB": 0.5,
-    "THIN_PIXELS": (1, 3),
-}
+        # ===== augmentation =====
+        "HFLIP_PROB": 0.5,
+        "ROT_PROB": 1.0,
+        "ROT_RANGE": (-20, 20),
+        "CUT_EDGE_PROB": 0.4,
+        "CUT_EDGE_RATIO": (0.05, 0.20),
+        "THIN_LINE_PROB": 0.5,
+        "THIN_PIXELS": (1, 3),
+        }
+    
+    # 設定の整合性チェック
+    expected_total = CFG["TARGET_NORMAL_IMAGES"] + CFG["TARGET_AUGMENTED_IMAGES"]
+    if CFG["TARGET_TOTAL_IMAGES"] != expected_total:
+        print(f"警告: TARGET_TOTAL_IMAGES ({CFG['TARGET_TOTAL_IMAGES']}) が通常+拡張の合計 ({expected_total}) と一致しません")
+        print(f"TARGET_TOTAL_IMAGESを {expected_total} に自動調整します")
+        CFG["TARGET_TOTAL_IMAGES"] = expected_total
+    
     try:
         CFG["COUNT_PROBS"] = load_count_probs(CFG["COUNT_STATS_FILE"], drop_zero=True)
         print("個数ヒストグラムを読み込みました。")
@@ -424,10 +655,18 @@ def main():
             "backgrounds_dir": backgrounds_dir
         },
         "augmentation_info": {
-            "horizontal_flip": "水平反転",
-            "rotation": "回転（角度範囲指定）",
-            "cut_edge": "端の切り取り",
-            "thin_line": "線の太さを細くする（侵食処理）"
+            "description": "通常合成とデータ拡張を組み合わせたデータセット",
+            "normal_augmentation": "なし（オリジナルの面積ベースリサイズのみ）",
+            "augmentation_types": {
+                "horizontal_flip": "水平反転",
+                "rotation": "回転（角度範囲指定）", 
+                "cut_edge": "端の切り取り",
+                "thin_line": "線の太さを細くする（侵食処理）"
+            },
+            "file_naming": {
+                "normal": "XXXX_normal.png (拡張なし)",
+                "augmented": "XXXX_aug.png (拡張適用)"
+            }
         }
     }
     
@@ -456,25 +695,36 @@ def main():
     train_bgs, val_bgs = bgs[:split_pt], bgs[split_pt:]
 
     # 生成
-    train_target = int(CFG["TARGET_TOTAL_IMAGES"] * CFG["BALLOON_SPLIT_RATIO"])
-    val_target = CFG["TARGET_TOTAL_IMAGES"] - train_target
+    train_normal = int(CFG["TARGET_NORMAL_IMAGES"] * CFG["BALLOON_SPLIT_RATIO"])
+    train_augmented = int(CFG["TARGET_AUGMENTED_IMAGES"] * CFG["BALLOON_SPLIT_RATIO"])
+    val_normal = CFG["TARGET_NORMAL_IMAGES"] - train_normal
+    val_augmented = CFG["TARGET_AUGMENTED_IMAGES"] - train_augmented
 
     generate_dataset_split(train_bgs, train_pairs,
                            os.path.join(out_root, "train", "images"),
                            os.path.join(out_root, "train", "masks"),
-                           "train", train_target, CFG)
+                           "train", train_normal, train_augmented, CFG)
 
     generate_dataset_split(val_bgs, val_pairs,
                            os.path.join(out_root, "val", "images"),
                            os.path.join(out_root, "val", "masks"),
-                           "val", val_target, CFG)
+                           "val", val_normal, val_augmented, CFG)
 
     # 統計情報を収集・追加
-    total_generated = train_target + val_target
+    total_train = train_normal + train_augmented
+    total_val = val_normal + val_augmented
+    total_generated = total_train + total_val
+    
     stats = {
         "total_images": total_generated,
-        "train_images": train_target,
-        "val_images": val_target,
+        "normal_images": CFG["TARGET_NORMAL_IMAGES"],
+        "augmented_images": CFG["TARGET_AUGMENTED_IMAGES"],
+        "train_images": total_train,
+        "train_normal": train_normal,
+        "train_augmented": train_augmented,
+        "val_images": total_val,
+        "val_normal": val_normal,
+        "val_augmented": val_augmented,
         "train_balloons_used": len(train_pairs),
         "val_balloons_used": len(val_pairs),
         "train_backgrounds_used": len(train_bgs),
@@ -490,7 +740,9 @@ def main():
 
     print(f"\n=== データセット生成完了 ===")
     print(f"★ 出力先: {out_root}")
-    print(f"総生成画像数: {total_generated}枚 (train: {train_target}, val: {val_target})")
+    print(f"総生成画像数: {total_generated}枚")
+    print(f"  - 通常合成: {CFG['TARGET_NORMAL_IMAGES']}枚 (train: {train_normal}, val: {val_normal})")
+    print(f"  - 拡張適用: {CFG['TARGET_AUGMENTED_IMAGES']}枚 (train: {train_augmented}, val: {val_augmented})")
     print(f"使用吹き出し: train {len(train_pairs)}個, val {len(val_pairs)}個")
     print(f"使用背景: train {len(train_bgs)}個, val {len(val_bgs)}個")
     print(f"設定・統計情報: {config_file_path}")
