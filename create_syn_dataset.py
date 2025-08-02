@@ -72,6 +72,50 @@ def sample_scale(bg_w: int, bw: int, cfg: dict) -> float:
         return float(np.clip(s, clip_min, clip_max))
     else:
         return random.uniform(*cfg["SCALE_RANGE"])
+
+def calculate_area_based_size(crop_w: int, crop_h: int, bg_w: int, bg_h: int, 
+                             target_scale: float, max_w_ratio: float = 0.3, 
+                             max_h_ratio: float = 0.4) -> tuple:
+    """
+    面積ベースのリサイズサイズ計算（アスペクト比による不平等を解消）
+    
+    Args:
+        crop_w, crop_h: クロップ後の吹き出しサイズ
+        bg_w, bg_h: 背景画像サイズ
+        target_scale: 目標スケール値（面積比の平方根）
+        max_w_ratio: 最大幅比率（背景幅に対する）
+        max_h_ratio: 最大高さ比率（背景高さに対する）
+    
+    Returns:
+        (new_w, new_h): 調整されたサイズ
+    """
+    # 面積ベースの目標サイズ計算
+    bg_area = bg_w * bg_h
+    target_area = bg_area * (target_scale ** 2)  # スケールの2乗で面積を決定
+    
+    aspect_ratio = crop_h / crop_w
+    
+    # アスペクト比を維持した理想サイズ
+    ideal_w = int(np.sqrt(target_area / aspect_ratio))
+    ideal_h = int(np.sqrt(target_area * aspect_ratio))
+    
+    # 最大サイズ制限
+    max_w = int(bg_w * max_w_ratio)
+    max_h = int(bg_h * max_h_ratio)
+    
+    # 制限に合わせて調整
+    scale_by_w = max_w / ideal_w if ideal_w > max_w else 1.0
+    scale_by_h = max_h / ideal_h if ideal_h > max_h else 1.0
+    adjust_scale = min(scale_by_w, scale_by_h)
+    
+    new_w = int(ideal_w * adjust_scale)
+    new_h = int(ideal_h * adjust_scale)
+    
+    # 最小サイズ確保
+    new_w = max(new_w, 20)
+    new_h = max(new_h, 20)
+    
+    return new_w, new_h
     
 def sample_num_balloons(cfg: dict, max_available: int) -> int:
     """
@@ -190,9 +234,13 @@ def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs:
             balloon_scale = sample_scale(bg_w, crop_w, cfg)
         except KeyError:
             balloon_scale = random.uniform(scale_range[0], scale_range[1])
-            
-        new_balloon_w = int(bg_w * balloon_scale)
-        new_balloon_h = int(crop_h * (new_balloon_w / crop_w))
+        
+        # 面積ベースのサイズ計算（アスペクト比による不平等を解消）
+        new_balloon_w, new_balloon_h = calculate_area_based_size(
+            crop_w, crop_h, bg_w, bg_h, balloon_scale,
+            max_w_ratio=cfg.get("MAX_WIDTH_RATIO", 0.3),
+            max_h_ratio=cfg.get("MAX_HEIGHT_RATIO", 0.4)
+        )
         
         # 背景サイズを超える場合はスキップ
         if new_balloon_w >= bg_w or new_balloon_h >= bg_h:
@@ -428,24 +476,28 @@ def main():
     backgrounds_dir = "generated_double_backs"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "syn_mihiraki1500_dataset01"
+    final_output_dir = "sample_dataset"
     
-    # 設定
+    # 設定（実際の統計データに基づいて精密調整）
     CFG = {
-        "SCALE_RANGE": (0.1, 0.3),          # 吹き出しのスケール範囲
-        "NUM_BALLOONS_RANGE": (7, 17),      # 実際の統計の25-75%範囲に合わせて調整
+        "SCALE_RANGE": (0.070, 0.120),      # 実際の生成結果に基づいて範囲を調整
+        "NUM_BALLOONS_RANGE": (9, 17),      # 統計で7個は1.4%と稀少なため9個から開始
         "MAX_ATTEMPTS": 200,                 # 配置試行回数
-        "TARGET_TOTAL_IMAGES": 1500,          # 総生成画像数（本番用に戻す）
+        "TARGET_TOTAL_IMAGES": 100,          # 総生成画像数（本番用に戻す）
         "TRAIN_RATIO": 0.8,                  # train用の比率
         "BALLOON_SPLIT_SEED": 10,            # 吹き出し分割のランダムシード
         
-        # 統計情報ベースのサンプリング設定
+        # 統計情報ベースのサンプリング設定（生成結果に基づいて再調整）
         "SCALE_MODE": "lognormal",           # "uniform" or "lognormal" 
-        "SCALE_MEAN": 0.10,                  # lognormal分布のmean (背景幅の10%に調整)
-        "SCALE_STD": 0.03,                   # lognormal分布のstd (標準偏差をさらに小さく)
-        "SCALE_CLIP": (0.05, 0.18),          # スケールのクリップ範囲（最大18%に制限）
+        "SCALE_MEAN": 0.105,                 # 実際の生成平均に合わせて微調整
+        "SCALE_STD": 0.025,                  # 分散を少し大きく調整
+        "SCALE_CLIP": (0.065, 0.130),       # 実際の範囲に合わせて調整
         "COUNT_PROBS": None,                 # 吹き出し個数の確率分布 (load_count_probs()で設定可能)
         "COUNT_STATS_FILE": "balloon_count_statistics.txt",  # 統計ファイルのパス
+        
+        # 面積ベースリサイズ設定（生成結果に基づいて再調整）
+        "MAX_WIDTH_RATIO": 0.20,             # やや拡大して幅比を上げる
+        "MAX_HEIGHT_RATIO": 0.30,            # やや拡大して高さも調整
     }
     
     # ディレクトリ作成
