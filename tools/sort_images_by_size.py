@@ -14,10 +14,10 @@ def sort_images_by_size():
     """画像をサイズ別に仕分け"""
     
     # ディレクトリパス設定
-    input_dir = "../generated_double_backs"
-    output_1536x1024_dir = "../generated_double_backs_1536x1024"
-    output_other_sizes_dir = "../generated_double_backs_other_sizes"
-    
+    input_dir = "./generated_double_backs"
+    output_1536x1024_dir = "./generated_double_backs_1536x1024"
+    output_other_sizes_dir = "./generated_double_backs_other_sizes"
+
     # 出力ディレクトリを作成
     os.makedirs(output_1536x1024_dir, exist_ok=True)
     os.makedirs(output_other_sizes_dir, exist_ok=True)

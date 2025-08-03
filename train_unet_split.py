@@ -18,7 +18,7 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # データセット
-    "ROOT":        Path("syn500-aug_dataset01"),  # train/val フォルダのルート
+    "ROOT":        Path("syn2000_dataset01"),  # train/val フォルダのルート
     "IMG_SIZE":    512,
 
     # 学習
@@ -30,7 +30,7 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "syn500-aug", # または "real" / "synreal" データセットによって書き換える
+    "DATASET":     "syn2000", # または "real" / "synreal" データセットによって書き換える
     "RUN_NAME":    "",
 
     "MODELS_DIR":  Path("models"),
