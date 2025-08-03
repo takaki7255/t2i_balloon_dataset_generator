@@ -31,7 +31,7 @@ CFG = {
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
-    "RESUME":      "models/syn_mihiraki750-unet-01.pt",
+    "RESUME":      "models/syn750_dataset02-unet-01.pt",
 
     "MODELS_DIR":  Path("models"),
 

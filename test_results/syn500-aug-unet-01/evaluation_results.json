@@ -1,0 +1,32 @@
+{
+  "model_tag": "syn500-aug-unet-01",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-08-03T16:41:06.576041",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.7848049059309321,
+      "iou": 0.6699209835945409,
+      "precision": 0.7856961061798584,
+      "recall": 0.8119082072033714,
+      "f1_score": 0.7848048571557118
+    },
+    "global_metrics": {
+      "dice": 0.8190405503440351,
+      "iou": 0.6935382502613756,
+      "precision": 0.8116596872008026,
+      "recall": 0.8265568817828345,
+      "f1_score": 0.8190405003481589,
+      "accuracy": 0.9587982177734338
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.16268890621867824,
+    "iou_std": 0.18189546208308918,
+    "precision_std": 0.1783667194831442,
+    "recall_std": 0.15253835671127797,
+    "f1_std": 0.16268890328976243
+  }
+}

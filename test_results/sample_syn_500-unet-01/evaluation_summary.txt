@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: sample_syn_500-unet-01
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-08-02 16:14:28
+
+Average Metrics (per image):
+  Dice Score: 0.8410 ± 0.1385
+  IoU:        0.7461 ± 0.1730
+  Precision:  0.8013 ± 0.1703
+  Recall:     0.9048 ± 0.1064
+  F1 Score:   0.8410 ± 0.1385
+
+Global Metrics (all pixels):
+  Dice Score: 0.8678
+  IoU:        0.7664
+  Precision:  0.8246
+  Recall:     0.9157
+  F1 Score:   0.8678
+  Accuracy:   0.9685

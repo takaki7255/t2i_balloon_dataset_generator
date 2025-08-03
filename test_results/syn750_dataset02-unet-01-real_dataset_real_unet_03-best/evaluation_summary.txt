@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn750_dataset02-unet-01-real_dataset_real_unet_03-best
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-08-02 19:44:41
+
+Average Metrics (per image):
+  Dice Score: 0.9267 ± 0.0968
+  IoU:        0.8756 ± 0.1377
+  Precision:  0.9215 ± 0.1161
+  Recall:     0.9382 ± 0.0928
+  F1 Score:   0.9267 ± 0.0968
+
+Global Metrics (all pixels):
+  Dice Score: 0.9418
+  IoU:        0.8900
+  Precision:  0.9357
+  Recall:     0.9480
+  F1 Score:   0.9418
+  Accuracy:   0.9868

@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn1000_dataset02-unet-01
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-08-03 15:06:29
+
+Average Metrics (per image):
+  Dice Score: 0.8336 ± 0.1477
+  IoU:        0.7371 ± 0.1788
+  Precision:  0.7864 ± 0.1744
+  Recall:     0.9083 ± 0.1177
+  F1 Score:   0.8336 ± 0.1477
+
+Global Metrics (all pixels):
+  Dice Score: 0.8614
+  IoU:        0.7565
+  Precision:  0.8073
+  Recall:     0.9232
+  F1 Score:   0.8614
+  Accuracy:   0.9665
