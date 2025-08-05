@@ -1,0 +1,32 @@
+{
+  "model_tag": "syn750_dataset02-unet-01-finetune100_dataset-finetuned",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-08-05T17:19:43.669724",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.9118792314145777,
+      "iou": 0.8570206593131339,
+      "precision": 0.9099357993241836,
+      "recall": 0.9208540190615052,
+      "f1_score": 0.9118791816429366
+    },
+    "global_metrics": {
+      "dice": 0.9307929913315913,
+      "iou": 0.870545164580245,
+      "precision": 0.9261367859120123,
+      "recall": 0.935496251999764,
+      "f1_score": 0.9307929413328422,
+      "accuracy": 0.9843069839477502
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.12782553576171052,
+    "iou_std": 0.16426591481199385,
+    "precision_std": 0.13711037768455442,
+    "recall_std": 0.13202192606199226,
+    "f1_std": 0.12782553543414188
+  }
+}

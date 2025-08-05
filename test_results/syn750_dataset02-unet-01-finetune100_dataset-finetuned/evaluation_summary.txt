@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn750_dataset02-unet-01-finetune100_dataset-finetuned
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-08-05 17:19:43
+
+Average Metrics (per image):
+  Dice Score: 0.9119 ± 0.1278
+  IoU:        0.8570 ± 0.1643
+  Precision:  0.9099 ± 0.1371
+  Recall:     0.9209 ± 0.1320
+  F1 Score:   0.9119 ± 0.1278
+
+Global Metrics (all pixels):
+  Dice Score: 0.9308
+  IoU:        0.8705
+  Precision:  0.9261
+  Recall:     0.9355
+  F1 Score:   0.9308
+  Accuracy:   0.9843

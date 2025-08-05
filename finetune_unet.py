@@ -15,7 +15,7 @@ from train_unet_split import (  # 既存実装を再利用
 # --------------------- 設定 ---------------------- #
 CFG = {
     # ★ ① 新しいデータセットルート
-    "ROOT":        Path("real_dataset_real_unet_03"),   # train/val 構造は同じにする
+    "ROOT":        Path("finetune100_dataset"),   # train/val 構造は同じにする
     "IMG_SIZE":    512,
 
     # ★ ② ハイパーパラメータ（微調整用に小さめ）
@@ -27,7 +27,7 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "real_dataset_real_unet_03",
+    "DATASET":     "finetune100_dataset",
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
@@ -98,7 +98,7 @@ def main():
 
         if va_iou > best_iou:
             best_iou, patience = va_iou, 0
-            ckpt = cfg["MODELS_DIR"] / f"{base_model_name}-{cfg['DATASET']}-best.pt"
+            ckpt = cfg["MODELS_DIR"] / f"{base_model_name}-{cfg['DATASET']}-finetuned.pt"
             torch.save(model.state_dict(), ckpt)
         else:
             patience += 1
