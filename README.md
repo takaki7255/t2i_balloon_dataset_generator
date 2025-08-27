@@ -25,7 +25,9 @@
 
 #### モデル学習・評価
 - `train_unet_balloon.py` - U-Net学習（メイン）
-- `train_unet_split.py` - データ分割学習
+- `train_unet_split.py` - U-Netデータ分割学習
+- `train_deeplabv3_split.py` - **DeepLab v3+学習**（ASPP搭載）
+- `run_deeplabv3_experiments.py` - DeepLab v3+バッチ実験実行
 - `finetune_unet.py` - ファインチューニング
 - `test_unet.py` - モデル評価
 
@@ -45,6 +47,9 @@
 - `analyze_balloon_scale.py` - 吹き出しサイズ分析
 - `analyze_new_stats.py` - 新設定統計分析
 - `analyze_optimization.py` - 最適化効果分析
+- `analyze_deeplabv3_architecture.py` - DeepLab v3+アーキテクチャ分析
+- `compare_architectures.py` - U-Net vs DeepLab v3+比較
+- `explain_deeplabv3_differences.py` - 学習スクリプト差分解説
 
 #### テスト・検証ツール
 - `test_statistical_sampling.py` - 統計サンプリングテスト
@@ -103,8 +108,19 @@ python dataset_quality_analyzer.py
 ```
 
 ### 3. モデル学習
+
+#### U-Net学習
 ```bash
 python train_unet_split.py
+```
+
+#### DeepLab v3+学習
+```bash
+# 単一実験
+python train_deeplabv3_split.py
+
+# バッチ実験（複数設定）
+python run_deeplabv3_experiments.py
 ```
 
 ### 4. モデル評価
@@ -155,3 +171,62 @@ CFG = {
 - 追加のデータ拡張手法
 - より精密な統計分析
 - リアルタイム品質監視
+
+## 🧠 セグメンテーションモデル
+
+### U-Net
+従来のエンコーダー・デコーダー構造を持つセグメンテーションモデル。
+- スキップ接続による高解像度情報の保持
+- 医療画像処理で実績あり
+- 軽量で高速な推論
+
+### DeepLab v3+ **（新規追加）**
+Atrous Convolutionとマルチスケール処理を特徴とする最新セグメンテーションモデル。
+
+#### 主要コンポーネント
+1. **Encoder（エンコーダー）**
+   - ResNet50/ResNet101バックボーン
+   - Atrous Convolutionによる受容野拡大
+   - Output Stride設定（8または16）
+
+2. **ASPP（Atrous Spatial Pyramid Pooling）**
+   - 5つの並列ブランチ（1×1 conv, 3×3 atrous conv×3, Global Average Pooling）
+   - マルチスケール特徴抽出
+   - Output Stride 16: dilation rates [6,12,18]
+   - Output Stride 8: dilation rates [12,24,36]
+
+3. **Decoder（デコーダー）**
+   - 低レベル特徴との融合
+   - バイリニア補間による解像度復元
+   - 軽量な設計
+
+#### 設定オプション
+```python
+CFG = {
+    "BACKBONE": "resnet50",        # resnet50 or resnet101
+    "OUTPUT_STRIDE": 16,           # 8 or 16
+    "WANDB_PROJ": "balloon-seg-deeplabv3"
+}
+```
+
+#### U-Netとの比較
+| 特徴 | U-Net | DeepLab v3+ |
+|------|-------|-------------|
+| 受容野 | 限定的 | Atrous Convで大幅拡大 |
+| マルチスケール | スキップ接続のみ | ASPP+低レベル特徴融合 |
+| 計算効率 | 高い | 中程度（ASPP分） |
+| 細部精度 | 高い（スキップ接続） | 高い（低レベル特徴融合） |
+| 大域的理解 | 限定的 | 優秀（ASPP） |
+
+#### 実験実行
+```bash
+# 単一設定での学習
+python train_deeplabv3_split.py
+
+# 複数設定でのバッチ実験
+python run_deeplabv3_experiments.py
+
+# アーキテクチャ分析
+python analyze_deeplabv3_architecture.py
+python compare_architectures.py
+```
