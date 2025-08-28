@@ -160,9 +160,10 @@ def eval_epoch(model,loader,dev):
     for x,y,_ in tqdm(loader,desc="eval ",leave=False):
         x,y=x.to(dev),y.to(dev)
         p=torch.sigmoid(model(x)); pb=(p>.5).float()
-        inter=(pb*y).sum((2,3)); union=(pb+y-pb*y).sum((2,3))
-        dice+=(2*inter/(pb.sum((2,3))+y.sum((2,3))+1e-7)).mean().item()*x.size(0)
-        iou +=(inter/(union+1e-7)).mean().item()*x.size(0)
+        inter=(pb*y).sum((2,3))
+        union=(pb+y-pb*y).sum((2,3))
+        den = union + 1e-7
+        iou += torch.where(den > 1e-6, inter/den, torch.ones_like(den)).mean().item()*x.size(0)
     n=len(loader.dataset); return dice/n,iou/n
 
 # -------------- Prediction dump ----------

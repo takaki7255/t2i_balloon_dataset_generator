@@ -15,6 +15,7 @@ from PIL import Image
 from tqdm import tqdm
 import wandb
 import torch.nn.functional as F
+import torchvision.models as models
 
 # --------------------------------------------------------------------
 CFG = {
@@ -47,7 +48,8 @@ CFG = {
     # DeepLab v3+ specific
     "BACKBONE":    "resnet50",  # resnet50, resnet101
     "OUTPUT_STRIDE": 16,        # 8 or 16
-    "ASPP_DILATE": [12, 24, 36],  # ASPP dilation rates
+    "PRETRAINED":  True,        # ImageNet事前学習重み使用
+    "IMAGENET_NORM": True,      # ImageNet正規化
 }
 # --------------------------------------------------------------------
 
@@ -56,9 +58,19 @@ def seed_everything(seed):
     torch.cuda.manual_seed_all(seed); torch.backends.cudnn.deterministic = True
 
 class BalloonDataset(Dataset):
-    def __init__(self, img_dir, mask_dir, img_size=512):
+    def __init__(self, img_dir, mask_dir, img_size=512, imagenet_norm=True):
         self.img_files = sorted(glob.glob(os.path.join(img_dir, "*.png")))
         self.img_size = img_size
+        self.imagenet_norm = imagenet_norm
+        
+        # ImageNet正規化パラメータ
+        if imagenet_norm:
+            self.normalize = transforms.Normalize(
+                mean=[0.485, 0.456, 0.406], 
+                std=[0.229, 0.224, 0.225]
+            )
+        else:
+            self.normalize = None
         
         self.mask_files = []
         for img_path in self.img_files:
@@ -81,6 +93,8 @@ class BalloonDataset(Dataset):
         
         # tensor
         img = transforms.ToTensor()(img)
+        if self.normalize:
+            img = self.normalize(img)
         msk = transforms.ToTensor()(msk)
         
         return img, msk, Path(self.img_files[idx]).stem
@@ -182,139 +196,68 @@ class Decoder(nn.Module):
         
         return x
 
-# Simplified ResNet backbone
-class BasicBlock(nn.Module):
-    expansion = 1
-    
-    def __init__(self, inplanes, planes, stride=1, dilation=1, downsample=None):
-        super().__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, 3, stride=stride, padding=dilation, dilation=dilation, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.relu = nn.ReLU(inplace=True)
-        self.conv2 = nn.Conv2d(planes, planes, 3, padding=1, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.downsample = downsample
-        self.stride = stride
-    
-    def forward(self, x):
-        identity = x
-        
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        
-        out = self.conv2(out)
-        out = self.bn2(out)
-        
-        if self.downsample is not None:
-            identity = self.downsample(x)
-        
-        out += identity
-        out = self.relu(out)
-        
-        return out
-
-class Bottleneck(nn.Module):
-    expansion = 4
-    
-    def __init__(self, inplanes, planes, stride=1, dilation=1, downsample=None):
-        super().__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes, 1, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, 3, stride=stride, padding=dilation, dilation=dilation, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(planes, planes * self.expansion, 1, bias=False)
-        self.bn3 = nn.BatchNorm2d(planes * self.expansion)
-        self.relu = nn.ReLU(inplace=True)
-        self.downsample = downsample
-        self.stride = stride
-    
-    def forward(self, x):
-        identity = x
-        
-        out = self.conv1(x)
-        out = self.bn1(out)
-        out = self.relu(out)
-        
-        out = self.conv2(out)
-        out = self.bn2(out)
-        out = self.relu(out)
-        
-        out = self.conv3(out)
-        out = self.bn3(out)
-        
-        if self.downsample is not None:
-            identity = self.downsample(x)
-        
-        out += identity
-        out = self.relu(out)
-        
-        return out
-
-class ResNet(nn.Module):
-    def __init__(self, block, layers, output_stride=16):
-        super().__init__()
-        self.inplanes = 64
-        
-        if output_stride == 16:
-            strides = [1, 2, 2, 1]
-            dilations = [1, 1, 1, 2]
-        elif output_stride == 8:
-            strides = [1, 2, 1, 1]
-            dilations = [1, 1, 2, 4]
+# Pretrained ResNet backbone with dilated convolutions
+def get_resnet_backbone(backbone_name, output_stride=16, pretrained=True):
+    """torchvisionのResNetを使用してバックボーンを作成"""
+    if backbone_name == 'resnet50':
+        if pretrained:
+            backbone = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
         else:
-            raise NotImplementedError
-        
-        self.conv1 = nn.Conv2d(3, 64, 7, stride=2, padding=3, bias=False)
-        self.bn1 = nn.BatchNorm2d(64)
-        self.relu = nn.ReLU(inplace=True)
-        self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)
-        
-        self.layer1 = self._make_layer(block, 64, layers[0], stride=strides[0], dilation=dilations[0])
-        self.layer2 = self._make_layer(block, 128, layers[1], stride=strides[1], dilation=dilations[1])
-        self.layer3 = self._make_layer(block, 256, layers[2], stride=strides[2], dilation=dilations[2])
-        self.layer4 = self._make_layer(block, 512, layers[3], stride=strides[3], dilation=dilations[3])
+            backbone = models.resnet50(weights=None)
+    elif backbone_name == 'resnet101':
+        if pretrained:
+            backbone = models.resnet101(weights=models.ResNet101_Weights.IMAGENET1K_V1)
+        else:
+            backbone = models.resnet101(weights=None)
+    else:
+        raise NotImplementedError(f"Backbone {backbone_name} not implemented")
     
-    def _make_layer(self, block, planes, blocks, stride=1, dilation=1):
-        downsample = None
-        if stride != 1 or self.inplanes != planes * block.expansion:
-            downsample = nn.Sequential(
-                nn.Conv2d(self.inplanes, planes * block.expansion, 1, stride=stride, bias=False),
-                nn.BatchNorm2d(planes * block.expansion))
-        
-        layers = []
-        layers.append(block(self.inplanes, planes, stride, dilation, downsample))
-        self.inplanes = planes * block.expansion
-        for _ in range(1, blocks):
-            layers.append(block(self.inplanes, planes, dilation=dilation))
-        
-        return nn.Sequential(*layers)
+    # Remove the last two layers (avgpool and fc)
+    backbone = nn.Sequential(*list(backbone.children())[:-2])
     
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-        
-        low_level_feat = self.layer1(x)
-        x = self.layer2(low_level_feat)
-        x = self.layer3(x)
-        x = self.layer4(x)
-        
-        return x, low_level_feat
+    # Modify stride and dilation for output_stride
+    if output_stride == 16:
+        # layer3: stride=2, dilation=1 -> stride=2, dilation=1 (no change)
+        # layer4: stride=2, dilation=1 -> stride=1, dilation=2
+        _modify_resnet_stage(backbone[6], dilation=2, stride=1)  # layer4
+    elif output_stride == 8:
+        # layer3: stride=2, dilation=1 -> stride=1, dilation=2
+        # layer4: stride=2, dilation=1 -> stride=1, dilation=4
+        _modify_resnet_stage(backbone[5], dilation=2, stride=1)  # layer3
+        _modify_resnet_stage(backbone[6], dilation=4, stride=1)  # layer4
+    
+    return backbone
+
+def _modify_resnet_stage(stage, dilation, stride):
+    """ResNetのstageを修正してdilationとstrideを調整"""
+    # First block
+    first_block = stage[0]
+    if hasattr(first_block, 'conv2'):
+        first_block.conv2.stride = (stride, stride)
+        first_block.conv2.dilation = (dilation, dilation)
+        first_block.conv2.padding = (dilation, dilation)
+    
+    # Downsample if exists
+    if first_block.downsample is not None:
+        first_block.downsample[0].stride = (stride, stride)
+    
+    # Other blocks
+    for i in range(1, len(stage)):
+        block = stage[i]
+        if hasattr(block, 'conv2'):
+            block.conv2.dilation = (dilation, dilation)
+            block.conv2.padding = (dilation, dilation)
 
 class DeepLabV3Plus(nn.Module):
-    def __init__(self, num_classes=1, backbone='resnet50', output_stride=16):
+    def __init__(self, num_classes=1, backbone='resnet50', output_stride=16, pretrained=True):
         super().__init__()
         
-        if backbone == 'resnet50':
-            self.backbone = ResNet(Bottleneck, [3, 4, 6, 3], output_stride)
+        # torchvisionの事前学習ResNetを使用
+        self.backbone = get_resnet_backbone(backbone, output_stride, pretrained)
+        
+        if backbone in ['resnet50', 'resnet101']:
             backbone_channels = 2048
-            low_level_channels = 256
-        elif backbone == 'resnet101':
-            self.backbone = ResNet(Bottleneck, [3, 4, 23, 3], output_stride)
-            backbone_channels = 2048
-            low_level_channels = 256
+            low_level_channels = 256  # layer1の出力チャンネル数
         else:
             raise NotImplementedError(f"Backbone {backbone} not implemented")
         
@@ -330,7 +273,19 @@ class DeepLabV3Plus(nn.Module):
     
     def forward(self, x):
         size = x.shape[-2:]
-        features, low_level_feat = self.backbone(x)
+        
+        # Extract features from backbone
+        # torchvisionのResNet構造: conv1, bn1, relu, maxpool, layer1, layer2, layer3, layer4
+        features = None
+        low_level_feat = None
+        
+        for i, layer in enumerate(self.backbone):
+            x = layer(x)
+            if i == 4:  # after layer1 (conv1, bn1, relu, maxpool, layer1)
+                low_level_feat = x
+        
+        features = x  # 最終的なx（layer4の出力）がfeatures
+        
         x = self.aspp(features)
         x = self.decoder(x, low_level_feat)
         x = F.interpolate(x, size=size, mode='bilinear', align_corners=False)
@@ -369,7 +324,13 @@ def eval_epoch(model,loader,dev):
             
             p,g=(pred>.5).float(),y
             inter=(p*g).sum((2,3)); union=(p+g).sum((2,3))
-            dice+=(2*inter/(union+1e-7)).sum(); iou+=(inter/(union-inter+1e-7)).sum(); cnt+=p.numel()//p.shape[-1]//p.shape[-2]
+            dice+=(2*inter/(union+1e-7)).sum()
+            
+            # IoU計算：ゼロユニオン対策
+            den = union - inter + 1e-7
+            iou_batch = torch.where(den > 1e-6, inter / den, torch.ones_like(den))
+            iou += iou_batch.sum()
+            cnt+=p.numel()//p.shape[-1]//p.shape[-2]
     all_probs = np.concatenate(all_probs)
     all_gts = np.concatenate(all_gts)
     return dice/cnt, iou/cnt, all_probs, all_gts
@@ -419,21 +380,48 @@ def main():
     
     # データ読み込み
     root = CFG["ROOT"]
-    ds_tr = BalloonDataset(root/"train/images", root/"train/masks", CFG["IMG_SIZE"])
-    ds_va = BalloonDataset(root/"val/images",   root/"val/masks",   CFG["IMG_SIZE"])
+    ds_tr = BalloonDataset(root/"train/images", root/"train/masks", CFG["IMG_SIZE"], CFG["IMAGENET_NORM"])
+    ds_va = BalloonDataset(root/"val/images", root/"val/masks", CFG["IMG_SIZE"], CFG["IMAGENET_NORM"])
     
     dl_tr = DataLoader(ds_tr, batch_size=CFG["BATCH"], shuffle=True,  num_workers=4, pin_memory=True)
     dl_va = DataLoader(ds_va, batch_size=CFG["BATCH"], shuffle=False, num_workers=4, pin_memory=True)
     
     print(f"Train: {len(ds_tr)}, Val: {len(ds_va)}")
+    print(f"ImageNet Normalization: {CFG['IMAGENET_NORM']}, Pretrained: {CFG['PRETRAINED']}")
     
     # モデル
-    model = DeepLabV3Plus(num_classes=1, backbone=CFG["BACKBONE"], output_stride=CFG["OUTPUT_STRIDE"]).to(dev)
-    print(f"Model: DeepLab v3+ with {CFG['BACKBONE']} backbone")
+    model = DeepLabV3Plus(
+        num_classes=1, 
+        backbone=CFG["BACKBONE"], 
+        output_stride=CFG["OUTPUT_STRIDE"],
+        pretrained=CFG["PRETRAINED"]
+    ).to(dev)
+    print(f"Model: DeepLab v3+ with {CFG['BACKBONE']} backbone (pretrained={CFG['PRETRAINED']})")
     
     loss_fn = ComboLoss()
     opt = torch.optim.Adam(model.parameters(), lr=CFG["LR"])
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, patience=5, factor=0.5)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="max", patience=5, factor=0.5)
+    
+    # 学習再開
+    start_epoch = 0
+    best_dice = 0
+    if CFG["RESUME"]:
+        print(f"Resuming from {CFG['RESUME']}")
+        checkpoint = torch.load(CFG["RESUME"], map_location=dev)
+        if 'model' in checkpoint:
+            model.load_state_dict(checkpoint['model'])
+            if 'optimizer' in checkpoint:
+                opt.load_state_dict(checkpoint['optimizer'])
+            if 'scheduler' in checkpoint:
+                scheduler.load_state_dict(checkpoint['scheduler'])
+            if 'epoch' in checkpoint:
+                start_epoch = checkpoint['epoch'] + 1
+            if 'best_dice' in checkpoint:
+                best_dice = checkpoint['best_dice']
+        else:
+            # 古い形式（model.state_dictのみ）
+            model.load_state_dict(checkpoint)
+        print(f"  Resumed from epoch {start_epoch}, best_dice: {best_dice:.4f}")
     
     # モデル保存ディレクトリ
     CFG["MODELS_DIR"].mkdir(exist_ok=True)
@@ -445,10 +433,10 @@ def main():
     wandb.init(project=CFG["WANDB_PROJ"], name=run_name, config=CFG)
     
     # 学習ループ
-    best_dice, wait = 0, 0
+    wait = 0
     model_tag = f"deeplabv3plus_{CFG['BACKBONE']}_os{CFG['OUTPUT_STRIDE']}_{dataset}"
     
-    for ep in range(CFG["EPOCHS"]):
+    for ep in range(start_epoch, CFG["EPOCHS"]):
         tr_loss = train_epoch(model, dl_tr, loss_fn, opt, dev)
         va_dice, va_iou, va_probs, va_gts = eval_epoch(model, dl_va, dev)
         
@@ -468,10 +456,21 @@ def main():
             "lr": opt.param_groups[0]["lr"]
         })
         
-        # ベストモデル保存
+        # ベストモデル保存（チェックポイント形式）
         if va_dice > best_dice:
             best_dice = va_dice
             wait = 0
+            # チェックポイント形式で保存
+            checkpoint = {
+                'epoch': ep,
+                'model': model.state_dict(),
+                'optimizer': opt.state_dict(),
+                'scheduler': scheduler.state_dict(),
+                'best_dice': best_dice,
+                'config': CFG
+            }
+            torch.save(checkpoint, CFG["MODELS_DIR"] / f"{model_tag}_checkpoint.pt")
+            # 従来形式も保存（互換性のため）
             torch.save(model.state_dict(), CFG["MODELS_DIR"] / f"{model_tag}.pt")
             print(f"  → New best model saved! Dice: {best_dice:.4f}")
         else:
