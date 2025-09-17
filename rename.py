@@ -2,7 +2,7 @@ import os
 import glob
 from pathlib import Path
 
-def rename_files(directory="./generated_double_backs_1536x1024"):
+def rename_files(directory="./generated_body"):
     """
     Rename all image files in the specified directory to sequential numbers.
     

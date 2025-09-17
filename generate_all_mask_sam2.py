@@ -113,9 +113,9 @@ def generate_mask_sam2(img_path: str, mask_path: str, processed_path: str,
 
 # ------------------------ 全ファイルループ -------------------------------- #
 def main():
-    balloons_dir = Path("generated_balloons")
+    balloons_dir = Path("generated_body")
     masks_dir    = Path("masks_sam2")
-    processed_dir = Path("masks_sam2_processed")  # 処理済みマスク用ディレクトリ
+    processed_dir = Path("body_masks")  # 処理済みマスク用ディレクトリ
     masks_dir.mkdir(exist_ok=True)
     processed_dir.mkdir(exist_ok=True)
 
