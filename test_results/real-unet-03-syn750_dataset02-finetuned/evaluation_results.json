@@ -1,0 +1,32 @@
+{
+  "model_tag": "real-unet-03-syn750_dataset02-finetuned",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-09-17T16:19:19.766211",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8473769936424604,
+      "iou": 0.7545486622243671,
+      "precision": 0.7968224234427145,
+      "recall": 0.9231883402724665,
+      "f1_score": 0.847376944545436
+    },
+    "global_metrics": {
+      "dice": 0.8739455412762411,
+      "iou": 0.776113032993758,
+      "precision": 0.8229826281411082,
+      "recall": 0.9316368279612302,
+      "f1_score": 0.8739454914679631,
+      "accuracy": 0.9696828842163049
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.13406160513882343,
+    "iou_std": 0.16873141186224896,
+    "precision_std": 0.1613581869461683,
+    "recall_std": 0.11417631012609684,
+    "f1_std": 0.13406160364270975
+  }
+}
