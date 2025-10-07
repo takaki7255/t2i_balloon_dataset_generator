@@ -110,6 +110,17 @@ class PanelQuad:
         )
 
 
+@dataclass
+class PanelDetection:
+    """Container for detected panel information."""
+
+    panel_rgba: np.ndarray
+    panel_mask: np.ndarray
+    bbox: Tuple[int, int, int, int]
+    quad: PanelQuad
+    contour: np.ndarray
+
+
 class FrameDetector:
     """Python port of ``Framedetect`` from the C++ implementation."""
 
@@ -126,6 +137,12 @@ class FrameDetector:
         Returns a list of RGBA images cropped to each panel.
         """
 
+        detections = self.detect_panels(src_page)
+        return [det.panel_rgba for det in detections]
+
+    def detect_panels(self, src_page: np.ndarray) -> List[PanelDetection]:
+        """Detect panels and return detailed metadata for each."""
+
         if src_page.ndim == 2:
             gray_img = src_page.copy()
             color_page = cv2.cvtColor(src_page, cv2.COLOR_GRAY2BGR)
@@ -134,7 +151,7 @@ class FrameDetector:
             gray_img = cv2.cvtColor(src_page, cv2.COLOR_BGR2GRAY)
 
         img_size = (gray_img.shape[1], gray_img.shape[0])
-        panel_images: List[np.ndarray] = []
+        detections: List[PanelDetection] = []
 
         # --- Speech balloon suppression -------------------------------------------------
         bin_balloon = cv2.threshold(gray_img, 230, 255, cv2.THRESH_BINARY)[1]
@@ -187,7 +204,16 @@ class FrameDetector:
             alpha_image = self.create_alpha_image(src_page, quad)
             x, y, w, h = brect
             panel = alpha_image[y : y + h, x : x + w].copy()
-            panel_images.append(panel)
+            mask = panel[:, :, 3].copy()
+            detections.append(
+                PanelDetection(
+                    panel_rgba=panel,
+                    panel_mask=mask,
+                    bbox=brect,
+                    quad=quad,
+                    contour=cnt,
+                )
+            )
 
             # Optional: draw detected panel on a copy (for debugging)
             cv2.polylines(
@@ -199,7 +225,7 @@ class FrameDetector:
                 lineType=cv2.LINE_AA,
             )
 
-        return panel_images
+        return detections
 
     # ------------------------------------------------------------------
     # Helper functions replicating C++ logic
