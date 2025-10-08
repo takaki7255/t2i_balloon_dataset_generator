@@ -20,8 +20,24 @@ import math
 from typing import List, Tuple, Optional, Dict, Any
 from dataclasses import dataclass
 
-# frame_separation.pyから必要なクラスをインポート
-from frame_separation import FrameDetector, PanelDetection, PanelQuad, Point
+
+@dataclass
+class Point:
+    """座標を表すクラス"""
+    x: int
+    y: int
+    
+    def __iter__(self):
+        return iter((self.x, self.y))
+
+
+@dataclass
+class PanelQuad:
+    """パネルの四隅の座標"""
+    lt: Point  # left-top
+    rt: Point  # right-top
+    lb: Point  # left-bottom
+    rb: Point  # right-bottom
 
 
 def regions_overlap(region1: tuple, region2: tuple) -> bool:
@@ -189,23 +205,124 @@ class CornerPosition:
     panel_mask: np.ndarray  # パネルのマスク
 
 
-def extract_panel_corners(background_path: str) -> List[CornerPosition]:
-    """背景画像からコマを抽出し、角の位置を取得"""
-    detector = FrameDetector()
+def detect_panels_simple(image: np.ndarray, 
+                        area_ratio_threshold: float = 0.85,
+                        min_area: int = 10000) -> List[Tuple[np.ndarray, Tuple[int, int, int, int], np.ndarray]]:
+    """
+    シンプルな二値化・輪郭抽出によるコマ検出
     
+    Args:
+        image: 入力画像（カラー）
+        area_ratio_threshold: 輪郭面積/バウンディングボックス面積の閾値（デフォルト0.85）
+        min_area: 最小コマ面積（デフォルト10000ピクセル）
+    
+    Returns:
+        List[(panel_mask, bbox, contour)]: パネルマスク、バウンディングボックス、輪郭のリスト
+    """
+    # グレースケール変換
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # 二値化（Otsuの自動閾値）
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    
+    # ノイズ除去（モルフォロジー演算）
+    kernel = np.ones((3, 3), np.uint8)
+    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel, iterations=2)
+    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, kernel, iterations=1)
+    
+    # 輪郭検出
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    panels = []
+    img_h, img_w = image.shape[:2]
+    
+    for contour in contours:
+        # 輪郭の面積を計算
+        contour_area = cv2.contourArea(contour)
+        
+        # 小さすぎる輪郭は無視
+        if contour_area < min_area:
+            continue
+        
+        # バウンディングボックスを取得
+        x, y, w, h = cv2.boundingRect(contour)
+        bbox_area = w * h
+        
+        # 面積比を計算
+        area_ratio = contour_area / bbox_area if bbox_area > 0 else 0
+        
+        # 面積比が閾値以上の場合、コマとして認識
+        if area_ratio >= area_ratio_threshold:
+            # パネルマスクを作成
+            panel_mask = np.zeros((h, w), dtype=np.uint8)
+            
+            # 輪郭を相対座標に変換してマスクに描画
+            contour_relative = contour - np.array([x, y])
+            cv2.drawContours(panel_mask, [contour_relative], -1, 255, -1)
+            
+            # 輪郭も返す（元の座標系）
+            panels.append((panel_mask, (x, y, w, h), contour))
+    
+    return panels
+
+
+def extract_panel_corners(background_path: str, 
+                         area_ratio_threshold: float = 0.85,
+                         min_area: int = 10000) -> List[CornerPosition]:
+    """
+    背景画像からコマを抽出し、角の位置を取得
+    
+    Args:
+        background_path: 背景画像のパス
+        area_ratio_threshold: 輪郭面積/バウンディングボックス面積の閾値
+        min_area: 最小コマ面積
+    """
     # 背景画像読み込み
     background = cv2.imread(background_path, cv2.IMREAD_COLOR)
     if background is None:
         raise FileNotFoundError(f"背景画像の読み込みに失敗: {background_path}")
     
     # コマ検出
-    detections = detector.detect_panels(background)
+    panels = detect_panels_simple(background, area_ratio_threshold, min_area)
     
     corners = []
-    for detection in detections:
-        quad = detection.quad
-        bbox = detection.bbox
-        panel_mask = detection.panel_mask
+    for panel_mask, bbox, contour in panels:
+        x, y, w, h = bbox
+        
+        # 輪郭を多角形近似して角を抽出
+        epsilon = 0.02 * cv2.arcLength(contour, True)
+        approx = cv2.approxPolyDP(contour, epsilon, True)
+        
+        # 近似した輪郭から4つの角を抽出
+        # 輪郭点が4点未満の場合はバウンディングボックスの角を使用
+        if len(approx) >= 4:
+            # 輪郭点をリストに変換
+            points = approx.reshape(-1, 2)
+            
+            # 左上・右上・左下・右下の角を見つける
+            # y座標でソート
+            points_sorted_y = points[points[:, 1].argsort()]
+            top_points = points_sorted_y[:len(points_sorted_y)//2]  # 上半分
+            bottom_points = points_sorted_y[len(points_sorted_y)//2:]  # 下半分
+            
+            # 上半分をx座標でソート
+            top_points = top_points[top_points[:, 0].argsort()]
+            lt = Point(int(top_points[0][0]), int(top_points[0][1]))  # 左上
+            rt = Point(int(top_points[-1][0]), int(top_points[-1][1]))  # 右上
+            
+            # 下半分をx座標でソート
+            bottom_points = bottom_points[bottom_points[:, 0].argsort()]
+            lb = Point(int(bottom_points[0][0]), int(bottom_points[0][1]))  # 左下
+            rb = Point(int(bottom_points[-1][0]), int(bottom_points[-1][1]))  # 右下
+        else:
+            # 輪郭点が少ない場合はバウンディングボックスを使用
+            lt = Point(x, y)
+            rt = Point(x + w, y)
+            lb = Point(x, y + h)
+            rb = Point(x + w, y + h)
+        
+        # 四隅の座標を定義
+        quad = PanelQuad(lt=lt, rt=rt, lb=lb, rb=rb)
         
         # 各角の位置を記録
         corner_types = ['lt', 'rt', 'lb', 'rb']
@@ -273,28 +390,29 @@ def place_balloon_at_corner(background: np.ndarray, balloon: np.ndarray, mask: n
     overhang_w = int(mask_w * overhang_ratio)
     overhang_h = int(mask_h * overhang_ratio)
     
+    # 輪郭線保護のための内側へのオフセット（デフォルト5ピクセル）
+    border_width = cfg.get("BORDER_WIDTH", 10)
+    
     # 角のタイプに応じて配置位置を計算（マスクの実際の領域を考慮）
+    # 輪郭線を保護するため、border_widthピクセル分内側に配置
     if corner_pos.corner_type == 'lt':
-        # 左上角：マスクの左上端を基準にはみ出させる
-        x, y = corner_x - mask_x - overhang_w, corner_y - mask_y - overhang_h
+        # 左上角：マスクの左上端を基準にはみ出させ、右下方向に内側へオフセット
+        x, y = corner_x - mask_x - overhang_w + border_width, corner_y - mask_y - overhang_h + border_width
     elif corner_pos.corner_type == 'rt':
-        # 右上角：マスクの右上端を基準にはみ出させる
-        x, y = corner_x - (mask_x + mask_w) + overhang_w, corner_y - mask_y - overhang_h
+        # 右上角：マスクの右上端を基準にはみ出させ、左下方向に内側へオフセット
+        x, y = corner_x - (mask_x + mask_w) + overhang_w - border_width, corner_y - mask_y - overhang_h + border_width
     elif corner_pos.corner_type == 'lb':
-        # 左下角：マスクの左下端を基準にはみ出させる
-        x, y = corner_x - mask_x - overhang_w, corner_y - (mask_y + mask_h) + overhang_h
+        # 左下角：マスクの左下端を基準にはみ出させ、右上方向に内側へオフセット
+        x, y = corner_x - mask_x - overhang_w + border_width, corner_y - (mask_y + mask_h) + overhang_h - border_width
     elif corner_pos.corner_type == 'rb':
-        # 右下角：マスクの右下端を基準にはみ出させる
-        x, y = corner_x - (mask_x + mask_w) + overhang_w, corner_y - (mask_y + mask_h) + overhang_h
+        # 右下角：マスクの右下端を基準にはみ出させ、左上方向に内側へオフセット
+        x, y = corner_x - (mask_x + mask_w) + overhang_w - border_width, corner_y - (mask_y + mask_h) + overhang_h - border_width
     else:
         x, y = corner_x, corner_y
     
     # 合成実行
     result_img = background.copy()
     result_mask = np.zeros((bg_h, bg_w), dtype=np.uint8)
-    
-    # 元の背景を保存（輪郭線復元用）
-    original_background = background.copy()
     
     # まず、パネルマスクとの論理積を取る（はみ出し部分を切り取る）
     if corner_pos.panel_mask is not None and corner_pos.panel_mask.size > 0:
@@ -349,15 +467,42 @@ def place_balloon_at_corner(background: np.ndarray, balloon: np.ndarray, mask: n
         if panel_mask_region.size == 0 or mask_region_temp.size == 0:
             return background, result_mask, {}
         
-        # 吹き出しマスクとパネルマスクの論理積を取る（収縮なし）
-        final_mask_region = cv2.bitwise_and(mask_region_temp, panel_mask_region)
+        # 1) パネルマスクを四角形に近似して、内側領域を抽出
+        # まず、パネルのバウンディングボックスから四角形マスクを作成
+        panel_mask_h, panel_mask_w = corner_pos.panel_mask.shape[:2]
+        panel_rect_mask = np.ones((panel_mask_h, panel_mask_w), dtype=np.uint8) * 255
         
-        # 切り取られたマスクでアルファブレンディング
+        # 枠線保護のため、矩形を内側に収縮
+        safe_distance = int(cfg.get("PANEL_SAFE_DISTANCE", 2))
+        panel_safe = panel_rect_mask.copy()
+        
+        # 上下左右からsafe_distanceピクセル分内側の矩形マスクを作成
+        if safe_distance > 0:
+            panel_safe[:safe_distance, :] = 0  # 上端
+            panel_safe[-safe_distance:, :] = 0  # 下端
+            panel_safe[:, :safe_distance] = 0  # 左端
+            panel_safe[:, -safe_distance:] = 0  # 右端
+        
+        # 元のパネルマスクとの論理積を取る（パネルの形状を保持）
+        panel_safe = cv2.bitwise_and(panel_safe, corner_pos.panel_mask)
+        
+        # ROIへ切り出し
+        panel_safe_region = panel_safe[panel_mask_offset_y:panel_mask_offset_y + overlap_h,
+                                       panel_mask_offset_x:panel_mask_offset_x + overlap_w]
+        
+        # 吹き出しマスクと "内側だけ" の論理積
+        final_mask_region = cv2.bitwise_and(mask_region_temp, panel_safe_region)
+        
+        # 2) "枠線そのもの" を特定（元マスク−内側マスク）。あとで再描画に使う
+        panel_border = cv2.subtract(corner_pos.panel_mask, panel_safe)
+        panel_border_region = panel_border[panel_mask_offset_y:panel_mask_offset_y + overlap_h,
+                                          panel_mask_offset_x:panel_mask_offset_x + overlap_w]
+        
+        # 通常ブレンド
         mask_norm = final_mask_region.astype(np.float32) / 255.0
         mask_3ch = cv2.merge([mask_norm, mask_norm, mask_norm])
         
         bg_region = result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x]
-        original_bg_region = original_background[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x].copy()
         
         if balloon_region_temp.shape == bg_region.shape and mask_3ch.shape == bg_region.shape:
             # 吹き出しを合成
@@ -365,57 +510,11 @@ def place_balloon_at_corner(background: np.ndarray, balloon: np.ndarray, mask: n
             result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x] = blended.astype(np.uint8)
             result_mask[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x] = final_mask_region
             
-            # パネルマスクの輪郭線（内側数ピクセル）を元の背景から上書き
-            border_width = cfg.get("BORDER_WIDTH", 5)
-            kernel = np.ones((border_width, border_width), np.uint8)
-            
-            # パネルマスクを収縮させて内側の領域を取得
-            panel_mask_eroded = cv2.erode(panel_mask_region, kernel, iterations=1)
-            # 元のマスクと収縮後のマスクの差分が輪郭線領域（内側）
-            border_mask = cv2.subtract(panel_mask_region, panel_mask_eroded)
-            
-            # デバッグ情報
-            border_pixels = np.count_nonzero(border_mask)
-            print(f"[DEBUG] border_width={border_width}, 輪郭線ピクセル数={border_pixels}")
-            print(f"[DEBUG] パネルマスク非ゼロ: {np.count_nonzero(panel_mask_region)}, 収縮後: {np.count_nonzero(panel_mask_eroded)}")
-            
-            if border_pixels > 0:
-                # デバッグモード判定
-                debug_border = cfg.get("DEBUG_BORDER", False)
-                
-                if debug_border:
-                    # デバッグモード: 輪郭線領域を赤く表示
-                    border_mask_norm = border_mask.astype(np.float32) / 255.0
-                    result_region = result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x]
-                    
-                    # 赤色で上書き (BGR形式)
-                    red_color = np.array([0, 0, 255], dtype=np.float32)
-                    for i in range(result_region.shape[0]):
-                        for j in range(result_region.shape[1]):
-                            if border_mask_norm[i, j] > 0:
-                                result_region[i, j] = red_color
-                    
-                    result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x] = result_region
-                    print(f"[DEBUG] デバッグモード: 輪郭線を赤く表示")
-                else:
-                    # 通常モード: 輪郭線領域全体を元の背景で上書き
-                    border_mask_norm = border_mask.astype(np.float32) / 255.0
-                    border_mask_3ch = cv2.merge([border_mask_norm, border_mask_norm, border_mask_norm])
-                    
-                    result_region = result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x]
-                    
-                    # デバッグ: 元の背景と現在の画像の差分を確認
-                    diff = np.sum(np.abs(original_bg_region.astype(np.float32) - result_region.astype(np.float32)))
-                    print(f"[DEBUG] 元の背景と現在の画像の差分: {diff}")
-                    
-                    restored = original_bg_region.astype(np.float32) * border_mask_3ch + result_region.astype(np.float32) * (1 - border_mask_3ch)
-                    result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x] = restored.astype(np.uint8)
-                    print(f"[DEBUG] 通常モード: 輪郭線を元の背景で上書き")
-            else:
-                print(f"[DEBUG] 輪郭線ピクセルが0のため上書きスキップ")
-            print("-" * 60)
+            # 3) ブレンド後、"枠線ピクセル" は元の背景で上書きして完全復元
+            orig_bg_region = background[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x]
+            border_idx = (panel_border_region > 0)
+            result_img[overlap_start_y:overlap_end_y, overlap_start_x:overlap_end_x][border_idx] = orig_bg_region[border_idx]
         else:
-            print(f"形状不一致: balloon={balloon_region_temp.shape}, bg={bg_region.shape}, mask={mask_3ch.shape}")
             return background, result_mask, {}
     else:
         # パネルマスクがない場合は通常の配置
@@ -807,7 +906,7 @@ def main():
         "NUM_BALLOONS_RANGE": (1, 5),  # コーナーアライメント用に調整
         "MAX_ATTEMPTS": 100,
         "TRAIN_RATIO": args.train_ratio,
-        "BALLOON_SPLIT_SEED": 20,
+        "BALLOON_SPLIT_SEED": 39,
         
         # 統計情報ベースのサンプリング設定（create_syn_dataset.pyと同じ）
         "SCALE_MODE": "lognormal",
@@ -820,6 +919,9 @@ def main():
         # 面積ベースリサイズ設定
         "MAX_WIDTH_RATIO": 0.20,
         "MAX_HEIGHT_RATIO": 0.30,
+        
+        # コーナー配置設定
+        "OVERHANG_RATIO": 0.25,  # はみ出し比率（デフォルト0.15→0.25に変更で約67%増加）
     }
     
     # ディレクトリ作成
