@@ -3,6 +3,7 @@
 
 frame_separation.pyのコマ抽出機能と、create_syn_dataset.pyの合成方法を組み合わせて、
 コマの角に吹き出しを配置し、角の形状に合わせて吹き出しを切り取る機能を提供します。
+rm -rf corner_erode_test && python create_corner_aligned_dataset.py --background-dir generated_double_backs --balloon-dir generated_balloons --mask-dir masks --output-dir temp_corner_erode_test --mask-output-dir temp_corner_erode_test_masks --final-output-dir corner_erode_test --corner-ratio 0.4 --target-images 100
 """
 
 import cv2
