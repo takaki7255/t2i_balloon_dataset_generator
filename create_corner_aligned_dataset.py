@@ -474,7 +474,7 @@ def place_balloon_at_corner(background: np.ndarray, balloon: np.ndarray, mask: n
         panel_rect_mask = np.ones((panel_mask_h, panel_mask_w), dtype=np.uint8) * 255
         
         # 枠線保護のため、矩形を内側に収縮
-        safe_distance = int(cfg.get("PANEL_SAFE_DISTANCE", 2))
+        safe_distance = int(cfg.get("PANEL_SAFE_DISTANCE", 5))
         panel_safe = panel_rect_mask.copy()
         
         # 上下左右からsafe_distanceピクセル分内側の矩形マスクを作成

@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn100-corner-unet-01
+Dataset: test_dataset
+Image Size: 512
+Total Images: 100
+Evaluation Time: 2025-10-10 13:11:54
+
+Average Metrics (per image):
+  Dice Score: 0.7759 ± 0.1543
+  IoU:        0.6568 ± 0.1830
+  Precision:  0.7280 ± 0.1922
+  Recall:     0.8623 ± 0.1249
+  F1 Score:   0.7759 ± 0.1543
+
+Global Metrics (all pixels):
+  Dice Score: 0.8141
+  IoU:        0.6864
+  Precision:  0.7644
+  Recall:     0.8707
+  F1 Score:   0.8141
+  Accuracy:   0.9551

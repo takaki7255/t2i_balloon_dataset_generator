@@ -18,8 +18,8 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # データセット
-    "ROOT":        Path("syn2000_dataset01"),  # train/val フォルダのルート
-    "IMG_SIZE":    512,
+    "ROOT":        Path("syn200-balloon-corner"),  # train/val フォルダのルート
+    "IMG_SIZE":    (512, 768),  # (height, width) = 縦512 × 横768
 
     # 学習
     "BATCH":       8,
@@ -30,7 +30,7 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "syn2000", # または "real" / "synreal" データセットによって書き換える
+    "DATASET":     "syn200-corner", # または "real" / "synreal" データセットによって書き換える
     "RUN_NAME":    "",
 
     "MODELS_DIR":  Path("models"),
@@ -59,12 +59,19 @@ class BalloonDataset(Dataset):
         if not self.img_paths:
             raise FileNotFoundError(f"No images found in {img_dir}")
         self.mask_dir  = mask_dir
+        
+        # img_size がタプルの場合とintの場合に対応
+        if isinstance(img_size, tuple):
+            resize_size = img_size  # (H, W)
+        else:
+            resize_size = (img_size, img_size)  # 正方形
+        
         self.img_tf = transforms.Compose([
-            transforms.Resize((img_size, img_size)),
+            transforms.Resize(resize_size),
             transforms.ToTensor(),
         ])
         self.mask_tf = transforms.Compose([
-            transforms.Resize((img_size, img_size), interpolation=Image.NEAREST),
+            transforms.Resize(resize_size, interpolation=Image.NEAREST),
             transforms.ToTensor(),
         ])
 
@@ -162,8 +169,14 @@ def eval_epoch(model,loader,dev):
         p=torch.sigmoid(model(x)); pb=(p>.5).float()
         inter=(pb*y).sum((2,3))
         union=(pb+y-pb*y).sum((2,3))
-        den = union + 1e-7
-        iou += torch.where(den > 1e-6, inter/den, torch.ones_like(den)).mean().item()*x.size(0)
+        
+        # Dice計算
+        dice_den = (pb+y).sum((2,3)) + 1e-7
+        dice += torch.where(dice_den > 1e-6, 2*inter/dice_den, torch.ones_like(dice_den)).mean().item()*x.size(0)
+        
+        # IoU計算
+        iou_den = union + 1e-7
+        iou += torch.where(iou_den > 1e-6, inter/iou_den, torch.ones_like(iou_den)).mean().item()*x.size(0)
     n=len(loader.dataset); return dice/n,iou/n
 
 # -------------- Prediction dump ----------
