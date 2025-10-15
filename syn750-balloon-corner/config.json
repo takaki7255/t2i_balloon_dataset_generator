@@ -1,9 +1,9 @@
 {
-  "timestamp": "2025-10-14T16:38:22.565426",
+  "timestamp": "2025-10-15T18:04:20.231469",
   "script_name": "create_corner_aligned_dataset.py",
-  "dataset_output_path": "syn500-balloon-corner",
+  "dataset_output_path": "syn750-balloon-corner",
   "corner_ratio": 0.4,
-  "target_images": 500,
+  "target_images": 750,
   "config": {
     "SCALE_RANGE": [
       0.07,
@@ -81,9 +81,9 @@
     "backgrounds_dir": "generated_double_backs"
   },
   "statistics": {
-    "total_images": 500,
-    "train_images": 400,
-    "val_images": 100,
+    "total_images": 750,
+    "train_images": 600,
+    "val_images": 150,
     "train_balloons_used": 84,
     "val_balloons_used": 21,
     "total_backgrounds_available": 77,

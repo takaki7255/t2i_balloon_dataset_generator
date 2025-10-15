@@ -21,6 +21,8 @@ import sys  # 緊急終了用
 import numpy as np
 import torch, torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
+from torch.cuda.amp import autocast, GradScaler
+from torch.utils.checkpoint import checkpoint
 from torchvision import transforms
 from sklearn.metrics import precision_recall_curve, auc
 import matplotlib.pyplot as plt
@@ -31,8 +33,8 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # データセット
-    "ROOT":        Path("syn750-balloon-corner"),  # train/val フォルダのルート
-    "IMG_SIZE":    (384, 512),  # (height, width) = 縦384 × 横512 (メモリ削減 & 縦長対応)
+    "ROOT":        Path("syn500-balloon-corner"),  # train/val フォルダのルート
+    "IMG_SIZE":    (512, 768),  # (height, width) = 縦512 × 横768 (メモリ削減 & 縦長対応)
 
     # 学習
     "BATCH":       8,           # バッチサイズ8に戻す（画像サイズ削減でメモリ節約）
@@ -46,9 +48,14 @@ CFG = {
     "EMERGENCY_GPU_THRESHOLD": 0.95,  # GPU使用率の緊急停止閾値 (0.0-1.0)
     "EMERGENCY_RAM_THRESHOLD": 0.90,  # RAM使用率の緊急停止閾値 (0.0-1.0)
 
+    # メモリ最適化
+    "USE_AMP": True,              # 混合精度学習（-35〜50% VRAM）
+    "USE_GRAD_CHECKPOINT": False,  # 勾配チェックポイント（-20〜40% VRAM、学習時間+20〜50%）
+    "USE_CHANNELS_LAST": True,    # channels-last メモリレイアウト（高速化＋省メモリ）
+
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "syn750-corner", # または "real" / "synreal" データセットによって書き換える
+    "DATASET":     "syn500-corner", # または "real" / "synreal" データセットによって書き換える
     "RUN_NAME":    "",
 
     "MODELS_DIR":  Path("models"),
@@ -225,14 +232,23 @@ def next_version(models_dir, prefix):
     last = int(exist[-1].stem.split("-")[-1])
     return f"{last+1:02d}"
 
-def collect_probs(model, loader, device):
+def collect_probs(model, loader, device, use_amp=False, use_channels_last=False):
     model.eval()
     probs, gts = [], []
     with torch.no_grad():
         for batch_idx, (x, y, _) in enumerate(loader):
             x = x.to(device)
             
-            p = torch.sigmoid(model(x)).cpu().numpy()      # (B,1,H,W)
+            # channels-last 適用
+            if use_channels_last:
+                x = x.contiguous(memory_format=torch.channels_last)
+            
+            # AMP対応の推論
+            if use_amp:
+                with autocast(dtype=torch.float16):
+                    p = torch.sigmoid(model(x)).cpu().numpy()      # (B,1,H,W)
+            else:
+                p = torch.sigmoid(model(x)).cpu().numpy()
             
             probs.append(p.reshape(-1))                    # flatten
             gts.append(y.numpy().reshape(-1))
@@ -254,31 +270,45 @@ def collect_probs(model, loader, device):
     return probs, gts
 
 # -------------- U-Net --------------
+# -------------- U-Net --------------
 class DoubleConv(nn.Module):
-    def __init__(self, in_c, out_c):
+    def __init__(self, in_c, out_c, use_checkpoint=False):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_c, out_c, 3, 1, 1),
-            nn.BatchNorm2d(out_c),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_c, out_c, 3, 1, 1),
-            nn.BatchNorm2d(out_c),
-            nn.ReLU(inplace=True)
-        )
+        self.use_checkpoint = use_checkpoint
+        self.conv1 = nn.Conv2d(in_c, out_c, 3, 1, 1)
+        self.bn1   = nn.BatchNorm2d(out_c)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(out_c, out_c, 3, 1, 1)
+        self.bn2   = nn.BatchNorm2d(out_c)
+        self.relu2 = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        return self.conv(x)
+        if self.use_checkpoint and self.training:
+            # 勾配チェックポイント使用（学習時のみ）
+            def f1(x):
+                return self.relu1(self.bn1(self.conv1(x)))
+            def f2(x):
+                return self.relu2(self.bn2(self.conv2(x)))
+            x = checkpoint(f1, x, use_reentrant=False)
+            x = checkpoint(f2, x, use_reentrant=False)
+            return x
+        else:
+            # 通常の forward（推論時または無効時）
+            x = self.relu1(self.bn1(self.conv1(x)))
+            x = self.relu2(self.bn2(self.conv2(x)))
+            return x
 
 class UNet(nn.Module):
-    def __init__(self, n_classes=1, chs=(64,128,256,512,1024)):
+    def __init__(self, n_classes=1, chs=(64,128,256,512,1024), use_checkpoint=False):
         super().__init__()
+        self.use_checkpoint = use_checkpoint
         self.downs, in_c = nn.ModuleList(), 3
         for c in chs[:-1]:
-            self.downs.append(DoubleConv(in_c, c)); in_c=c
-        self.bottleneck = DoubleConv(chs[-2], chs[-1])
+            self.downs.append(DoubleConv(in_c, c, use_checkpoint)); in_c=c
+        self.bottleneck = DoubleConv(chs[-2], chs[-1], use_checkpoint)
         self.ups_tr  = nn.ModuleList([nn.ConvTranspose2d(chs[i], chs[i-1], 2,2)
                          for i in range(len(chs)-1,0,-1)])
-        self.up_convs= nn.ModuleList([DoubleConv(chs[i], chs[i-1])
+        self.up_convs= nn.ModuleList([DoubleConv(chs[i], chs[i-1], use_checkpoint)
                          for i in range(len(chs)-1,0,-1)])
         self.out_conv= nn.Conv2d(chs[0], n_classes, 1)
         self.pool = nn.MaxPool2d(2)
@@ -305,9 +335,11 @@ class ComboLoss(nn.Module):
         return self.a*self.bce(y_p,y_t)+(1-self.a)*self.dice(y_p,y_t)
 
 # -------------- Train / Eval ------------
-def train_epoch(model, loader, lossf, opt, dev, cfg=None, current_epoch=None):
+def train_epoch(model, loader, lossf, opt, dev, scaler, cfg=None, current_epoch=None):
     model.train()
     run = 0
+    use_amp = cfg.get("USE_AMP", False) if cfg else False
+    use_channels_last = cfg.get("USE_CHANNELS_LAST", False) if cfg else False
     
     for batch_idx, (x, y, _) in enumerate(tqdm(loader, desc="train", leave=False)):
         # メモリ安全チェック（10バッチごと）
@@ -326,12 +358,26 @@ def train_epoch(model, loader, lossf, opt, dev, cfg=None, current_epoch=None):
         
         x, y = x.to(dev, non_blocking=True), y.to(dev, non_blocking=True)
         
+        # channels-last 適用（バッチテンソルに対して）
+        if use_channels_last:
+            x = x.contiguous(memory_format=torch.channels_last)
+            y = y.contiguous(memory_format=torch.channels_last)
+        
         opt.zero_grad(set_to_none=True)
         
-        logits = model(x)
-        loss = lossf(logits, y)
-        loss.backward()
-        opt.step()
+        # 混合精度学習
+        if use_amp:
+            with autocast(dtype=torch.float16):
+                logits = model(x)
+                loss = lossf(logits, y)
+            scaler.scale(loss).backward()
+            scaler.step(opt)
+            scaler.update()
+        else:
+            logits = model(x)
+            loss = lossf(logits, y)
+            loss.backward()
+            opt.step()
         
         run += loss.item() * x.size(0)
         
@@ -355,6 +401,8 @@ def train_epoch(model, loader, lossf, opt, dev, cfg=None, current_epoch=None):
 def eval_epoch(model, loader, dev, cfg=None, current_epoch=None):
     model.eval()
     dice = iou = 0
+    use_amp = cfg.get("USE_AMP", False) if cfg else False
+    use_channels_last = cfg.get("USE_CHANNELS_LAST", False) if cfg else False
     
     for batch_idx, (x, y, _) in enumerate(tqdm(loader, desc="eval ", leave=False)):
         # メモリ安全チェック（15バッチごと）
@@ -373,7 +421,17 @@ def eval_epoch(model, loader, dev, cfg=None, current_epoch=None):
         
         x, y = x.to(dev, non_blocking=True), y.to(dev, non_blocking=True)
         
-        p = torch.sigmoid(model(x))
+        # channels-last 適用（バッチテンソルに対して）
+        if use_channels_last:
+            x = x.contiguous(memory_format=torch.channels_last)
+            y = y.contiguous(memory_format=torch.channels_last)
+        
+        # 混合精度推論
+        if use_amp:
+            with autocast(dtype=torch.float16):
+                p = torch.sigmoid(model(x))
+        else:
+            p = torch.sigmoid(model(x))
         
         pb = (p > .5).float()
         inter = (pb * y).sum((2,3))
@@ -410,6 +468,8 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
     """val loader 先頭から PRED_SAMPLE_N 枚推論し PNG 保存 & wandb へログ"""
     if epoch % cfg["SAVE_PRED_EVERY"] != 0: return
     model.eval()
+    use_amp = cfg.get("USE_AMP", False)
+    use_channels_last = cfg.get("USE_CHANNELS_LAST", False)
 
     pred_dir = run_dir / cfg["PRED_DIR"]
     pred_dir.mkdir(exist_ok=True)
@@ -422,7 +482,16 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
             img = x[i:i+1].to(device)
             gt  = y[i]
             
-            pred = torch.sigmoid(model(img))[0,0]          # (H,W)
+            # channels-last 適用
+            if use_channels_last:
+                img = img.contiguous(memory_format=torch.channels_last)
+            
+            # AMP対応の推論
+            if use_amp:
+                with autocast(dtype=torch.float16):
+                    pred = torch.sigmoid(model(img))[0,0]          # (H,W)
+            else:
+                pred = torch.sigmoid(model(img))[0,0]
             
             pred_bin = (pred > 0.5).cpu().numpy()*255
             gt_np    = gt[0].cpu().numpy()*255
@@ -513,8 +582,13 @@ def main():
     dl_va=DataLoader(val_ds  ,batch_size=cfg["BATCH"],shuffle=False,num_workers=0,pin_memory=False)
     #dl_te=DataLoader(test_ds ,batch_size=cfg["BATCH"],shuffle=False,num_workers=4,pin_memory=True)
 
-    # モデル作成
-    model = UNet().to(dev)
+    # モデル作成（勾配チェックポイント対応）
+    model = UNet(use_checkpoint=cfg.get("USE_GRAD_CHECKPOINT", False)).to(dev)
+    
+    # channels-last メモリレイアウト
+    if torch.cuda.is_available() and cfg.get("USE_CHANNELS_LAST", False):
+        model = model.to(memory_format=torch.channels_last)
+        print("✅ Channels-last メモリレイアウトを適用")
     
     if cfg["RESUME"]:
         model.load_state_dict(torch.load(cfg["RESUME"],map_location=dev)); print("Resumed")
@@ -522,6 +596,27 @@ def main():
     opt=torch.optim.AdamW(model.parameters(),lr=cfg["LR"])
     sched=torch.optim.lr_scheduler.CosineAnnealingLR(opt,T_max=cfg["EPOCHS"])
     lossf=ComboLoss()
+    
+    # 混合精度学習用のGradScaler（新しいAPI）
+    if cfg.get("USE_AMP", False):
+        try:
+            # PyTorch 2.0以降の推奨API
+            from torch.amp import GradScaler as NewGradScaler
+            scaler = NewGradScaler('cuda')
+        except ImportError:
+            # 古いバージョンへのフォールバック
+            scaler = GradScaler()
+    else:
+        scaler = None
+    
+    # メモリ最適化設定の表示
+    print("\n" + "="*60)
+    print("⚡ メモリ最適化設定")
+    print("="*60)
+    print(f"混合精度（AMP）:         {'✅ 有効' if cfg.get('USE_AMP', False) else '❌ 無効'}")
+    print(f"勾配チェックポイント:     {'✅ 有効' if cfg.get('USE_GRAD_CHECKPOINT', False) else '❌ 無効'}")
+    print(f"Channels-last:          {'✅ 有効' if cfg.get('USE_CHANNELS_LAST', False) else '❌ 無効'}")
+    print("="*60 + "\n")
 
     best_iou=0; patience=0
     for ep in range(1,cfg["EPOCHS"]+1):
@@ -546,12 +641,12 @@ def main():
             mem_reserved = torch.cuda.memory_reserved() / 1e9
             print(f"\n[Epoch {ep}] GPU Memory: {mem_allocated:.2f}GB allocated, {mem_reserved:.2f}GB reserved")
         
-        tr_loss=train_epoch(model, dl_tr, lossf, opt, dev, cfg, ep)
+        tr_loss=train_epoch(model, dl_tr, lossf, opt, dev, scaler, cfg, ep)
         va_dice,va_iou=eval_epoch(model, dl_va, dev, cfg, ep)
         sched.step()
 
         if ep % 5 == 0:
-            probs, gts = collect_probs(model, dl_va, dev)
+            probs, gts = collect_probs(model, dl_va, dev, cfg.get("USE_AMP", False), cfg.get("USE_CHANNELS_LAST", False))
             prec, rec, _ = precision_recall_curve(gts, probs)
             pr_auc = auc(rec, prec)
             

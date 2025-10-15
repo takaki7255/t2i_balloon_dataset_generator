@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-U-Net 推論専用 : models/<tag>.pt + real_dataset/test を使い
+U-Net 推論専用 (Low Memory版) : train_unet_split_lowmem.pyで学習したモデル用
+models/<tag>.pt + real_dataset/test を使い
 Dice / IoU を計算し、予測マスク PNG を保存＆wandb にアップロード
 """
 
@@ -78,32 +79,35 @@ class BalloonDataset(Dataset):
         return img, mask, stem
 
 
-# ---------------- U-Net (train_unet_split.pyと同じ定義) ---------------
+# ---------------- U-Net (train_unet_split_lowmem.pyと同じ定義) ---------------
 class DoubleConv(nn.Module):
-    def __init__(self, in_c, out_c):
+    def __init__(self, in_c, out_c, use_checkpoint=False):
         super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv2d(in_c, out_c, 3, 1, 1),
-            nn.BatchNorm2d(out_c),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_c, out_c, 3, 1, 1),
-            nn.BatchNorm2d(out_c),
-            nn.ReLU(inplace=True)
-        )
+        self.use_checkpoint = use_checkpoint
+        self.conv1 = nn.Conv2d(in_c, out_c, 3, 1, 1)
+        self.bn1   = nn.BatchNorm2d(out_c)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(out_c, out_c, 3, 1, 1)
+        self.bn2   = nn.BatchNorm2d(out_c)
+        self.relu2 = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        return self.conv(x)
+        # テスト時は常に通常のforward（チェックポイント不使用）
+        x = self.relu1(self.bn1(self.conv1(x)))
+        x = self.relu2(self.bn2(self.conv2(x)))
+        return x
 
 class UNet(nn.Module):
-    def __init__(self, n_classes=1, chs=(64,128,256,512,1024)):
+    def __init__(self, n_classes=1, chs=(64,128,256,512,1024), use_checkpoint=False):
         super().__init__()
+        self.use_checkpoint = use_checkpoint
         self.downs, in_c = nn.ModuleList(), 3
         for c in chs[:-1]:
-            self.downs.append(DoubleConv(in_c, c)); in_c=c
-        self.bottleneck = DoubleConv(chs[-2], chs[-1])
+            self.downs.append(DoubleConv(in_c, c, use_checkpoint)); in_c=c
+        self.bottleneck = DoubleConv(chs[-2], chs[-1], use_checkpoint)
         self.ups_tr  = nn.ModuleList([nn.ConvTranspose2d(chs[i], chs[i-1], 2,2)
                          for i in range(len(chs)-1,0,-1)])
-        self.up_convs= nn.ModuleList([DoubleConv(chs[i], chs[i-1])
+        self.up_convs= nn.ModuleList([DoubleConv(chs[i], chs[i-1], use_checkpoint)
                          for i in range(len(chs)-1,0,-1)])
         self.out_conv= nn.Conv2d(chs[0], n_classes, 1)
         self.pool = nn.MaxPool2d(2)
@@ -270,6 +274,7 @@ def save_results_to_file(metrics, cfg, result_dir):
         "img_size": cfg["IMG_SIZE"],
         "batch_size": cfg["BATCH"],
         "evaluation_time": datetime.now().isoformat(),
+        "model_type": "lowmem (train_unet_split_lowmem.py)",
         "metrics": {
             "average_metrics": {
                 "dice": float(metrics["avg_dice"]),
@@ -305,9 +310,10 @@ def save_results_to_file(metrics, cfg, result_dir):
     # 読みやすいテキスト形式でも保存
     txt_path = result_dir / "evaluation_summary.txt"
     with open(txt_path, 'w', encoding='utf-8') as f:
-        f.write(f"Model Evaluation Results\n")
+        f.write(f"Model Evaluation Results (Low Memory Version)\n")
         f.write(f"=" * 50 + "\n\n")
         f.write(f"Model: {cfg['MODEL_TAG']}\n")
+        f.write(f"Model Type: Low Memory (train_unet_split_lowmem.py)\n")
         f.write(f"Dataset: {cfg['DATA_ROOT']}\n")
         f.write(f"Image Size: {cfg['IMG_SIZE']}\n")
         f.write(f"Total Images: {len(metrics['individual_dice'])}\n")
@@ -337,7 +343,7 @@ def save_results_to_file(metrics, cfg, result_dir):
 def main():
     cfg = CFG
     if not cfg["RUN_NAME"]:
-        cfg["RUN_NAME"] = cfg["MODEL_TAG"] + "-test"
+        cfg["RUN_NAME"] = cfg["MODEL_TAG"] + "-test-lowmem"
     seed_everything(cfg["SEED"])
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -346,7 +352,7 @@ def main():
     run_dir = Path(wandb.run.dir)
 
     # ---------- 結果保存ディレクトリ作成 ----------
-    result_dir = Path("test_results") / cfg["MODEL_TAG"]
+    result_dir = Path("test_results") / (cfg["MODEL_TAG"] + "_lowmem")
     result_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------- data ----------
@@ -359,18 +365,19 @@ def main():
     print(f"テストデータ数: {len(test_ds)}枚")
 
     # ---------- model ----------
-    model = UNet().to(dev)
+    # use_checkpoint=Falseでインスタンス化（推論時はチェックポイント不使用）
+    model = UNet(use_checkpoint=False).to(dev)
     ckpt = Path("models") / f"{cfg['MODEL_TAG']}.pt"
     assert ckpt.exists(), f"checkpoint not found: {ckpt}"
     model.load_state_dict(torch.load(ckpt, map_location=dev))
-    print(f"モデル読み込み完了: {ckpt}")
+    print(f"モデル読み込み完了 (Low Memory版): {ckpt}")
 
     # ---------- 詳細評価 ----------
     print("詳細評価を実行中...")
     metrics = evaluate_detailed(model, dl, dev)
     
     # 基本メトリクス表示
-    print(f"\n=== 評価結果 ===")
+    print(f"\n=== 評価結果 (Low Memory版) ===")
     print(f"Average Dice: {metrics['avg_dice']:.4f}")
     print(f"Average IoU:  {metrics['avg_iou']:.4f}")
     print(f"Average F1:   {metrics['avg_f1']:.4f}")

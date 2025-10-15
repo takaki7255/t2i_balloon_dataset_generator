@@ -5,7 +5,7 @@ Model: syn100-corner-unet-01
 Dataset: test_dataset
 Image Size: 512
 Total Images: 100
-Evaluation Time: 2025-10-10 13:11:54
+Evaluation Time: 2025-10-14 18:00:19
 
 Average Metrics (per image):
   Dice Score: 0.7759 ± 0.1543

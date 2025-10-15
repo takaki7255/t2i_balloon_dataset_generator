@@ -1,0 +1,32 @@
+{
+  "model_tag": "syn500-corner-unet-02",
+  "data_root": "test_dataset",
+  "img_size": 512,
+  "batch_size": 8,
+  "evaluation_time": "2025-10-14T17:54:46.904476",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.784017920416459,
+      "iou": 0.6671741853860464,
+      "precision": 0.7831218353693287,
+      "recall": 0.8092023222433191,
+      "f1_score": 0.7840178713363674
+    },
+    "global_metrics": {
+      "dice": 0.8180368105361616,
+      "iou": 0.6921000736979288,
+      "precision": 0.8114581246892945,
+      "recall": 0.824723038221898,
+      "f1_score": 0.8180367605394373,
+      "accuracy": 0.958610877990719
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.15228945626865,
+    "iou_std": 0.18055976861133718,
+    "precision_std": 0.18515766474186557,
+    "recall_std": 0.14941428743858703,
+    "f1_std": 0.15228945510455505
+  }
+}

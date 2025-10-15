@@ -9,3 +9,4 @@ results_mask/*
 *.jpg
 wandb/*
 *.pt
+*.pth
