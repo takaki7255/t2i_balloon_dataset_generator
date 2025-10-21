@@ -12,13 +12,13 @@ from pathlib import Path
 # ===== 設定 =====
 mask_root = "./../Manga109/masks"         # マスクのルート（masks/作品名/カテゴリ名/*.png）
 image_root = "./../Manga109/images"       # 画像のルート
-target_category = "balloon"                                   # 処理対象カテゴリ
+target_category = "onomatopoeia"                                   # 処理対象カテゴリ
 
 # データセット設定
 datasets = {
     "real_dataset": {
         "output_root": "real_dataset",
-        "num_samples": 50,
+        "num_samples": 200,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {

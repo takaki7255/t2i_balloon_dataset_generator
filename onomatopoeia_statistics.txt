@@ -1,0 +1,40 @@
+Onomatopoeia Statistics
+========================================
+Total onomatopoeia annotations: 60549
+Total images analyzed: 10619
+Images with onomatopoeia: 8396
+Images without onomatopoeia: 2223
+
+Count per Image Statistics (Images with Onomatopoeia Only):
+Mean: 7.211648
+Median: 6.000000
+Standard deviation: 6.096970
+Min: 1
+Max: 82
+25th percentile: 3.00
+75th percentile: 10.00
+
+Size Ratio Statistics (Segmentation-based):
+Mean: 0.001179
+Median: 0.000371
+Standard deviation: 0.002549
+Min: 0.000000
+Max: 0.075457
+25th percentile: 0.000122
+75th percentile: 0.001133
+
+Bounding Box Size Ratio Statistics:
+Mean: 0.005623
+Median: 0.001488
+Standard deviation: 0.014176
+Min: 0.000001
+Max: 0.564616
+25th percentile: 0.000504
+75th percentile: 0.004762
+
+Area Statistics (pixels):
+Mean: 2298.58
+Median: 731.00
+Standard deviation: 4974.11
+Min: 1.00
+Max: 146430.00
