@@ -467,7 +467,7 @@ def main():
         "SCALE_MODE": "lognormal",
         "SCALE_MEAN": 0.005623,
         "SCALE_STD": 0.014176,
-        "SCALE_CLIP": (0.001, 0.030),  # より広い範囲に拡大（0.001～0.030 = 0.1%～3%）
+        "SCALE_CLIP": (0.002, 0.030),  # 最小値を引き上げ（0.0015～0.030 = 0.15%～3%）
         "COUNT_STATS_FILE": "onomatopoeia_statistics.txt",
         "MAX_WIDTH_RATIO": 0.25,
         "MAX_HEIGHT_RATIO": 0.25,
