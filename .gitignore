@@ -10,3 +10,4 @@ results_mask/*
 wandb/*
 *.pt
 *.pth
+*.DS_Store
