@@ -523,7 +523,7 @@ def main():
     parser = argparse.ArgumentParser(description="オノマトペ合成データセット作成")
     parser.add_argument("--onomatopoeia-dir", default="onomatopeias", help="オノマトペ画像ディレクトリ")
     parser.add_argument("--mask-dir", default="onomatopeia_masks", help="マスク画像ディレクトリ")
-    parser.add_argument("--background-dir", default="generated_double_backs", help="背景画像ディレクトリ")
+    parser.add_argument("--background-dir", default="generated_double_backs_1536x1024", help="背景画像ディレクトリ")
     parser.add_argument("--output-dir", default="onomatopeia_datasets", help="基本出力ディレクトリ")
     parser.add_argument("--dataset-name", type=str, default="test", help="データセット名 (dataset01, train_v1など)")
     parser.add_argument("--target-images", type=int, default=100, help="生成する画像数")

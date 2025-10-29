@@ -1,12 +1,62 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-U-Net 推論専用 : models/<tag>.pt + real_dataset/test を使い
-Dice / IoU を計算し、予測マスク PNG を保存＆wandb にアップロード
+U-Net inference and evaluation script
+Loads a trained model and evaluates on test dataset
+Calculates Dice/IoU metrics and saves prediction masks
+
+Command Line Usage Examples:
+----------------------------
+# Basic evaluation with model tag
+python test_unet.py --model-tag syn500-corner-unet-01
+
+# Specify custom paths
+python test_unet.py --model-tag syn500-corner-unet-01 --data-root ./test_dataset --models-dir ./balloon_models
+
+# Full configuration example
+python test_unet.py \
+    --model-tag syn1000-corner-unet-01 \
+    --models-dir ./balloon_models \
+    --data-root ./test_dataset \
+    --result-dir ./experiment_results \
+    --batch 16 \
+    --save-pred-n 10 \
+    --wandb-proj balloon-seg-experiments \
+    --run-name syn1000-corner-test-01
+
+# Directly specify model path
+python test_unet.py --model-path ./balloon_models/syn500-corner-unet-01.pt --data-root ./test_dataset
+
+# Disable wandb logging
+python test_unet.py --model-tag syn500-corner-unet-01 --no-wandb
+
+Available Arguments:
+-------------------
+--model-tag     : Model tag (e.g., syn500-corner-unet-01) - will look in models-dir
+--model-path    : Direct path to model .pt file (overrides model-tag)
+--models-dir    : Directory containing model files (default: ./models)
+--data-root     : Test dataset root directory (contains images/ and masks/)
+--batch         : Batch size for inference
+--result-dir    : Directory to save evaluation results
+--save-pred-n   : Number of prediction images to save (0=save all)
+--wandb-proj    : Wandb project name
+--run-name      : Wandb run name
+--no-wandb      : Disable wandb logging
+
+Output:
+-------
+Results are saved to: {result-dir}/{model-tag}/
+  - evaluation_results.json    : Metrics in JSON format
+  - evaluation_summary.txt     : Human-readable summary
+  - images/                    : Original test images
+  - masks/                     : Ground truth masks
+  - predicts/                  : Predicted masks
+  - comparisons/               : Side-by-side comparisons
 """
 
 import glob, os, random, time
 from pathlib import Path
+import argparse  # コマンドライン引数
 
 import numpy as np
 import torch, torch.nn as nn
@@ -334,19 +384,84 @@ def save_results_to_file(metrics, cfg, result_dir):
 
 
 # ---------------- Main -------------------
+def parse_args():
+    """コマンドライン引数を解析"""
+    parser = argparse.ArgumentParser(description='U-Net Test/Evaluation Script')
+    
+    # モデル関連
+    parser.add_argument('--model-tag', type=str, default=None,
+                        help='Model tag name (default: use CFG["MODEL_TAG"])')
+    parser.add_argument('--model-path', type=str, default=None,
+                        help='Direct path to model checkpoint (overrides --model-tag)')
+    parser.add_argument('--models-dir', type=str, default='models',
+                        help='Models directory (default: "models")')
+    
+    # データセット関連
+    parser.add_argument('--data-root', type=str, default=None,
+                        help='Test dataset root directory (default: use CFG["DATA_ROOT"])')
+    parser.add_argument('--batch', type=int, default=None,
+                        help='Batch size (default: use CFG["BATCH"])')
+    
+    # 出力関連
+    parser.add_argument('--result-dir', type=str, default='test_results',
+                        help='Results output directory (default: "test_results")')
+    parser.add_argument('--save-pred-n', type=int, default=None,
+                        help='Number of predictions to save (default: use CFG["SAVE_PRED_N"])')
+    
+    # wandb関連
+    parser.add_argument('--wandb-proj', type=str, default=None,
+                        help='Wandb project name (default: use CFG["WANDB_PROJ"])')
+    parser.add_argument('--run-name', type=str, default=None,
+                        help='Wandb run name (default: auto-generated)')
+    parser.add_argument('--no-wandb', action='store_true',
+                        help='Disable wandb logging')
+    
+    return parser.parse_args()
+
 def main():
-    cfg = CFG
-    if not cfg["RUN_NAME"]:
+    # コマンドライン引数を解析
+    args = parse_args()
+    
+    # CFGを上書き
+    cfg = CFG.copy()
+    
+    if args.model_tag:
+        cfg["MODEL_TAG"] = args.model_tag
+        print(f"🏷️  Model tag: {cfg['MODEL_TAG']}")
+    
+    if args.data_root:
+        cfg["DATA_ROOT"] = Path(args.data_root)
+        print(f"📁 Test data root: {cfg['DATA_ROOT']}")
+    
+    if args.batch:
+        cfg["BATCH"] = args.batch
+        print(f"📦 Batch size: {cfg['BATCH']}")
+    
+    if args.save_pred_n:
+        cfg["SAVE_PRED_N"] = args.save_pred_n
+        print(f"💾 Save predictions: {cfg['SAVE_PRED_N']}")
+    
+    if args.wandb_proj:
+        cfg["WANDB_PROJ"] = args.wandb_proj
+        print(f"📊 Wandb project: {cfg['WANDB_PROJ']}")
+    
+    if args.run_name:
+        cfg["RUN_NAME"] = args.run_name
+    elif not cfg["RUN_NAME"]:
         cfg["RUN_NAME"] = cfg["MODEL_TAG"] + "-test"
+    
     seed_everything(cfg["SEED"])
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
     # ---------- wandb ----------
-    wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
-    run_dir = Path(wandb.run.dir)
+    if not args.no_wandb:
+        wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
+        run_dir = Path(wandb.run.dir)
+    else:
+        print("⚠️  Wandb logging disabled")
 
     # ---------- 結果保存ディレクトリ作成 ----------
-    result_dir = Path("test_results") / cfg["MODEL_TAG"]
+    result_dir = Path(args.result_dir) / cfg["MODEL_TAG"]
     result_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------- data ----------
@@ -360,7 +475,13 @@ def main():
 
     # ---------- model ----------
     model = UNet().to(dev)
-    ckpt = Path("models") / f"{cfg['MODEL_TAG']}.pt"
+    
+    # モデルパスの決定
+    if args.model_path:
+        ckpt = Path(args.model_path)
+    else:
+        ckpt = Path(args.models_dir) / f"{cfg['MODEL_TAG']}.pt"
+    
     assert ckpt.exists(), f"checkpoint not found: {ckpt}"
     model.load_state_dict(torch.load(ckpt, map_location=dev))
     print(f"モデル読み込み完了: {ckpt}")
@@ -379,14 +500,15 @@ def main():
     print(f"Accuracy:     {metrics['accuracy']:.4f}")
 
     # wandb にログ
-    wandb.log({
-        "test_avg_dice": metrics["avg_dice"],
-        "test_avg_iou": metrics["avg_iou"],
-        "test_avg_f1": metrics["avg_f1"],
-        "test_global_dice": metrics["global_dice"],
-        "test_global_iou": metrics["global_iou"],
-        "test_accuracy": metrics["accuracy"]
-    })
+    if not args.no_wandb:
+        wandb.log({
+            "test_avg_dice": metrics["avg_dice"],
+            "test_avg_iou": metrics["avg_iou"],
+            "test_avg_f1": metrics["avg_f1"],
+            "test_global_dice": metrics["global_dice"],
+            "test_global_iou": metrics["global_iou"],
+            "test_accuracy": metrics["accuracy"]
+        })
 
     # ---------- 全画像と予測結果を保存 ----------
     print("\n予測結果を保存中...")
@@ -399,7 +521,8 @@ def main():
     print(f"\n=== 完了 ===")
     print(f"結果保存先: {result_dir}")
     
-    wandb.finish()
+    if not args.no_wandb:
+        wandb.finish()
 
 if __name__=="__main__":
     main()

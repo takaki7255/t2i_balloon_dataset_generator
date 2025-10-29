@@ -55,7 +55,7 @@ def generate_all_masks():
     """画像をリネームしてからマスクを生成"""
     
     balloons_dir = "balloons"
-    masks_dir = "masks"
+    masks_dir = "balloon_masks"
     
     # 1. まず画像ファイルを通し番号にリネーム
     print("=== 画像ファイルのリネーム ===")

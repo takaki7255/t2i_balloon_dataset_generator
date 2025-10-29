@@ -1,5 +1,51 @@
 """
-U-Net training (train/val/test    # メモリ監視・緊急停止
+U-Net training script with train/val split and memory monitoring
+
+Command Line Usage Examples:
+----------------------------
+# Basic training with default settings
+python train_unet_split.py
+
+# Specify dataset and model directory
+python train_unet_split.py --root ./balloon_dataset/syn500_dataset --dataset syn500-corner
+
+# Custom training parameters
+python train_unet_split.py --root ./balloon_dataset/syn500_dataset --dataset syn500-corner --epochs 150 --batch 16 --lr 5e-5
+
+# Resume training from checkpoint
+python train_unet_split.py --resume ./balloon_models/syn500-corner-unet-01.pt
+
+# Full configuration example
+python train_unet_split.py \
+    --root ./balloon_dataset/syn1000_dataset \
+    --dataset syn1000-corner \
+    --models-dir ./balloon_models \
+    --epochs 100 \
+    --batch 8 \
+    --lr 1e-4 \
+    --patience 20 \
+    --wandb-proj balloon-seg-experiments \
+    --run-name syn1000-corner-experiment-01
+
+# Disable early stopping (large patience)
+python train_unet_split.py --root ./balloon_dataset/syn500_dataset --patience 999
+
+Available Arguments:
+-------------------
+--root          : Dataset root directory (contains train/val/test folders)
+--dataset       : Dataset name for model naming and wandb
+--models-dir    : Directory to save trained models
+--resume        : Path to checkpoint to resume training
+--batch         : Batch size
+--epochs        : Number of training epochs
+--lr            : Learning rate
+--patience      : Early stopping patience (epochs without improvement)
+--wandb-proj    : Wandb project name
+--run-name      : Wandb run name
+
+Configuration (CFG):
+-------------------
+    # メモリ監視・緊急停止
     "ENABLE_EMERGENCY_STOP": True,   # False にすると緊急停止を無効化（警告のみ）
     "EMERGENCY_GPU_THRESHOLD": 0.95,  # GPU使用率の緊急停止閾値 (0.0-1.0)
     "EMERGENCY_RAM_THRESHOLD": 0.90,  # RAM使用率の緊急停止閾値 (0.0-1.0)
@@ -8,8 +54,6 @@ U-Net training (train/val/test    # メモリ監視・緊急停止
     "USE_AMP": True,              # 混合精度学習（-35〜50% VRAM）
     "USE_GRAD_CHECKPOINT": True,  # 勾配チェックポイント（-20〜40% VRAM）
     "USE_CHANNELS_LAST": True,    # channels-last メモリレイアウト（高速化）
-
-    # wandbrs) + periodic prediction dump
 """
 
 import glob, random, time, os
@@ -17,6 +61,7 @@ from pathlib import Path
 import psutil  # システムリソース監視用
 import gc  # ガベージコレクション
 import sys  # 緊急終了用
+import argparse  # コマンドライン引数
 
 import numpy as np
 import torch, torch.nn as nn
@@ -31,7 +76,7 @@ import wandb
 # --------------------------------------------------------------------
 CFG = {
     # データセット
-    "ROOT":        Path("syn750-balloon-corner"),  # train/val フォルダのルート
+    "ROOT":        Path("./balloon_dataset/real200_dataset"),  # train/val フォルダのルート
     "IMG_SIZE":    (384, 512),  # (height, width) = 縦384 × 横512 (メモリ削減 & 縦長対応)
 
     # 学習
@@ -48,10 +93,10 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "syn750-corner", # または "real" / "synreal" データセットによって書き換える
+    "DATASET":     "balloon_dataset/real200", # または "real" / "synreal" データセットによって書き換える
     "RUN_NAME":    "",
 
-    "MODELS_DIR":  Path("models"),
+    "MODELS_DIR":  Path("balloon_models"),
 
     # 予測マスク出力
     "SAVE_PRED_EVERY": 10,     # 5 → 10 に変更（頻度を半減）
@@ -465,8 +510,88 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
         torch.cuda.empty_cache()
 
 # -------------- Main ---------------------
+def parse_args():
+    """コマンドライン引数を解析"""
+    parser = argparse.ArgumentParser(description='U-Net Training Script')
+    
+    # データセット関連
+    parser.add_argument('--root', type=str, default=None,
+                        help='Dataset root directory (default: use CFG["ROOT"])')
+    parser.add_argument('--dataset', type=str, default=None,
+                        help='Dataset name for wandb/model tag (default: use CFG["DATASET"])')
+    
+    # モデル関連
+    parser.add_argument('--models-dir', type=str, default=None,
+                        help='Models directory (default: use CFG["MODELS_DIR"])')
+    parser.add_argument('--resume', type=str, default=None,
+                        help='Resume from checkpoint path (default: use CFG["RESUME"])')
+    
+    # 学習パラメータ
+    parser.add_argument('--batch', type=int, default=None,
+                        help='Batch size (default: use CFG["BATCH"])')
+    parser.add_argument('--epochs', type=int, default=None,
+                        help='Number of epochs (default: use CFG["EPOCHS"])')
+    parser.add_argument('--lr', type=float, default=None,
+                        help='Learning rate (default: use CFG["LR"])')
+    parser.add_argument('--patience', type=int, default=None,
+                        help='Early stopping patience (default: use CFG["PATIENCE"])')
+    
+    # wandb関連
+    parser.add_argument('--wandb-proj', type=str, default=None,
+                        help='Wandb project name (default: use CFG["WANDB_PROJ"])')
+    parser.add_argument('--run-name', type=str, default=None,
+                        help='Wandb run name (default: auto-generated)')
+    
+    return parser.parse_args()
+
 def main():
-    cfg=CFG; seed_everything(cfg["SEED"])
+    # コマンドライン引数を解析
+    args = parse_args()
+    
+    # CFGを上書き
+    cfg=CFG.copy()
+    
+    if args.root:
+        cfg["ROOT"] = Path(args.root)
+        print(f"📁 Dataset root: {cfg['ROOT']}")
+    
+    if args.dataset:
+        cfg["DATASET"] = args.dataset
+        print(f"📊 Dataset name: {cfg['DATASET']}")
+    
+    if args.models_dir:
+        cfg["MODELS_DIR"] = Path(args.models_dir)
+        print(f"💾 Models directory: {cfg['MODELS_DIR']}")
+    
+    if args.resume:
+        cfg["RESUME"] = args.resume
+        print(f"🔄 Resume from: {cfg['RESUME']}")
+    
+    if args.batch:
+        cfg["BATCH"] = args.batch
+        print(f"📦 Batch size: {cfg['BATCH']}")
+    
+    if args.epochs:
+        cfg["EPOCHS"] = args.epochs
+        print(f"🔁 Epochs: {cfg['EPOCHS']}")
+    
+    if args.lr:
+        cfg["LR"] = args.lr
+        print(f"📈 Learning rate: {cfg['LR']}")
+    
+    if args.patience:
+        cfg["PATIENCE"] = args.patience
+        print(f"⏱️  Patience: {cfg['PATIENCE']}")
+    
+    if args.wandb_proj:
+        cfg["WANDB_PROJ"] = args.wandb_proj
+        print(f"📊 Wandb project: {cfg['WANDB_PROJ']}")
+    
+    if args.run_name:
+        cfg["RUN_NAME"] = args.run_name
+        print(f"🏷️  Run name: {cfg['RUN_NAME']}")
+    
+    seed_everything(cfg["SEED"])
     dev="cuda" if torch.cuda.is_available() else "cpu"
     
     # システムリソース確認
@@ -493,13 +618,15 @@ def main():
     print("  - メモリをクリアして安全に終了")
     print("="*60 + "\n")
     
-    prefix = f"{CFG['DATASET']}-unet"
-    version = next_version(CFG["MODELS_DIR"], prefix)
-    model_tag = f"{prefix}-{version}"          # synthetic-unet-01 など
+    # データセット名からファイル名用のプレフィックスを作成（パス区切り文字を除去）
+    dataset_name = cfg["DATASET"].replace("/", "-").replace("\\", "-")
+    prefix = f"{dataset_name}-unet"
+    version = next_version(cfg["MODELS_DIR"], prefix)
+    model_tag = f"{prefix}-{version}"          # syn200_allsize_dataset-unet-01 など
 
     # wandb の run 名が空ならここで入れる
-    if not CFG["RUN_NAME"]:
-        CFG["RUN_NAME"] = model_tag
+    if not cfg["RUN_NAME"]:
+        cfg["RUN_NAME"] = model_tag
 
     wandb.init(project=CFG["WANDB_PROJ"], name=CFG["RUN_NAME"], config=CFG)
     run_dir = Path(wandb.run.dir)
@@ -595,7 +722,8 @@ def main():
             torch.save(model.state_dict(), ckpt_wandb)
 
             # models/ にもコピー（固定ファイル名）
-            ckpt_models = CFG["MODELS_DIR"] / f"{model_tag}.pt"
+            cfg["MODELS_DIR"].mkdir(parents=True, exist_ok=True)
+            ckpt_models = cfg["MODELS_DIR"] / f"{model_tag}.pt"
             torch.save(model.state_dict(), ckpt_models)
         else:
             patience+=1

@@ -482,19 +482,19 @@ def main():
     """メイン処理"""
     
     # パス設定
-    balloons_dir = "generated_balloons"
-    masks_dir = "masks"
+    balloons_dir = "balloons"
+    masks_dir = "balloon_masks"
     backgrounds_dir = "generated_double_backs_1536x1024"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "test_syn_dataset"
+    final_output_dir = "balloon_dataset/syn2000_dataset"
 
     # 設定（実際の統計データに基づいて精密調整）
     CFG = {
         "SCALE_RANGE": (0.070, 0.120),      # 実際の生成結果に基づいて範囲を調整
         "NUM_BALLOONS_RANGE": (9, 17),      # 統計で7個は1.4%と稀少なため9個から開始
         "MAX_ATTEMPTS": 200,                 # 配置試行回数
-        "TARGET_TOTAL_IMAGES": 50,          # 総生成画像数（本番用に戻す）
+        "TARGET_TOTAL_IMAGES": 2000,          # 総生成画像数（本番用に戻す）
         "TRAIN_RATIO": 0.8,                  # train用の比率
         "BALLOON_SPLIT_SEED": 10,            # 吹き出し分割のランダムシード
         

@@ -1,0 +1,35 @@
+{
+  "model_tag": "real200_dataset-unet-01",
+  "data_root": "balloon_dataset\\test100_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-10-29T12:35:15.582833",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8789675707088087,
+      "iou": 0.8191955797893784,
+      "precision": 0.9144717111257407,
+      "recall": 0.8602243969817568,
+      "f1_score": 0.878967522801483
+    },
+    "global_metrics": {
+      "dice": 0.9162898641424602,
+      "iou": 0.8455119444069792,
+      "precision": 0.9529240257020268,
+      "recall": 0.8823681490270328,
+      "f1_score": 0.9162898142163389,
+      "accuracy": 0.981222890218094
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.19086743654147903,
+    "iou_std": 0.2110817744706255,
+    "precision_std": 0.18187465985332146,
+    "recall_std": 0.2080066380915078,
+    "f1_std": 0.1908674287559964
+  }
+}

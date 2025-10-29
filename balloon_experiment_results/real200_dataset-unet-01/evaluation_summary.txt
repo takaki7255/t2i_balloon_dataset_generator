@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: real200_dataset-unet-01
+Dataset: balloon_dataset\test100_dataset
+Image Size: (384, 512)
+Total Images: 100
+Evaluation Time: 2025-10-29 12:35:15
+
+Average Metrics (per image):
+  Dice Score: 0.8790 ± 0.1909
+  IoU:        0.8192 ± 0.2111
+  Precision:  0.9145 ± 0.1819
+  Recall:     0.8602 ± 0.2080
+  F1 Score:   0.8790 ± 0.1909
+
+Global Metrics (all pixels):
+  Dice Score: 0.9163
+  IoU:        0.8455
+  Precision:  0.9529
+  Recall:     0.8824
+  F1 Score:   0.9163
+  Accuracy:   0.9812

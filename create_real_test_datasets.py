@@ -14,15 +14,15 @@ mask_root = "./../Manga109/masks"         # マスクのルート（masks/作品
 image_root = "./../Manga109/images"       # 画像のルート
 target_category = "onomatopoeia"                                   # 処理対象カテゴリ
 
-# データセット設定
+# データセット設定（target_categoryベースで出力先を決定）
 datasets = {
     "real_dataset": {
-        "output_root": "real_dataset",
+        "output_root": f"./{target_category}_dataset/real200_dataset",
         "num_samples": 200,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {
-        "output_root": "test_dataset", 
+        "output_root": f"./{target_category}_dataset/test100_dataset", 
         "num_samples": 100,
         "structure": "test_only"  # test のみ
     }
@@ -125,18 +125,19 @@ def create_dataset(config, available_masks, used_indices=None):
     return used_indices.union(set(selected_indices))
 
 def main():
-    print("Manga109 balloon カテゴリからデータセット作成開始")
+    print(f"Manga109 {target_category} カテゴリからデータセット作成開始")
     
-    # balloonカテゴリのマスクを収集
-    print("balloon カテゴリのマスクを検索中...")
+    # 指定カテゴリのマスクを収集
+    print(f"{target_category} カテゴリのマスクを検索中...")
     mask_paths = glob(os.path.join(mask_root, "*", target_category, "*_mask.png"))
     
     if not mask_paths:
-        print("エラー: balloon カテゴリのマスクが見つかりません")
+        print(f"エラー: {target_category} カテゴリのマスクが見つかりません")
         print(f"検索パス: {os.path.join(mask_root, '*', target_category, '*_mask.png')}")
         return
     
     print(f"見つかったマスク数: {len(mask_paths)}")
+    print(f"出力先ディレクトリ: ./{target_category}_dataset/")
     
     # 必要な総数をチェック
     total_needed = sum(config["num_samples"] for config in datasets.values())

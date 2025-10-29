@@ -1,0 +1,191 @@
+[2025-10-28 19:42:46] =
+[2025-10-28 19:42:46] U-Net Automated Experiments (Conda Environment)
+[2025-10-28 19:42:46] =
+[2025-10-28 19:42:46] Conda Environment: myenv
+[2025-10-28 19:42:46] Mode: Train + Test
+[2025-10-28 19:42:46] Wandb: Enabled
+[2025-10-28 19:42:46] Datasets: 9
+[2025-10-28 19:42:46] Log File: ./experiment_results/experiment_log_20251028_194246.txt
+[2025-10-28 19:42:46] 
+[2025-10-28 19:42:46] 
+[2025-10-28 19:42:46] =
+[2025-10-28 19:42:46] Dataset: syn200_allsize_dataset
+[2025-10-28 19:42:46] =
+[2025-10-28 19:42:46]   Root: ./balloon_dataset/syn200_allsize_dataset
+[2025-10-28 19:42:46]   Epochs: 100
+[2025-10-28 19:42:46]   Batch Size: 8
+[2025-10-28 19:42:46]   Patience: 15
+[2025-10-28 19:42:46] 
+[2025-10-28 19:42:46] Training: syn200_allsize_dataset
+[2025-10-28 19:42:46] -
+[2025-10-28 19:42:46]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn200_allsize_dataset --dataset syn200_allsize_dataset --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn200_allsize_dataset-train
+[2025-10-28 20:01:48] [OK] Training completed: syn200_allsize_dataset
+[2025-10-28 20:01:48] 
+[2025-10-28 20:01:48] Testing: syn200_allsize_dataset
+[2025-10-28 20:01:48] -
+[2025-10-28 20:01:48]    Using model: syn200_allsize_dataset-unet-01
+[2025-10-28 20:01:48]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn200_allsize_dataset-unet-01 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn200_allsize_dataset-test
+[2025-10-28 20:02:15] [OK] Test completed: syn200_allsize_dataset
+[2025-10-28 20:02:15] 
+[2025-10-28 20:02:15] =
+[2025-10-28 20:02:15] Dataset: syn200_dataset
+[2025-10-28 20:02:15] =
+[2025-10-28 20:02:15]   Root: ./balloon_dataset/syn200_dataset
+[2025-10-28 20:02:15]   Epochs: 100
+[2025-10-28 20:02:15]   Batch Size: 8
+[2025-10-28 20:02:15]   Patience: 15
+[2025-10-28 20:02:15] 
+[2025-10-28 20:02:15] Training: syn200_dataset
+[2025-10-28 20:02:15] -
+[2025-10-28 20:02:15]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn200_dataset --dataset syn200_dataset --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn200_dataset-train
+[2025-10-28 20:24:56] [OK] Training completed: syn200_dataset
+[2025-10-28 20:24:56] 
+[2025-10-28 20:24:56] Testing: syn200_dataset
+[2025-10-28 20:24:56] -
+[2025-10-28 20:24:56]    Using model: syn200_dataset-unet-01
+[2025-10-28 20:24:56]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn200_dataset-unet-01 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn200_dataset-test
+[2025-10-28 20:25:22] [OK] Test completed: syn200_dataset
+[2025-10-28 20:25:22] 
+[2025-10-28 20:25:22] =
+[2025-10-28 20:25:22] Dataset: syn500_dataset
+[2025-10-28 20:25:22] =
+[2025-10-28 20:25:22]   Root: ./balloon_dataset/syn500_dataset
+[2025-10-28 20:25:22]   Epochs: 100
+[2025-10-28 20:25:22]   Batch Size: 8
+[2025-10-28 20:25:22]   Patience: 15
+[2025-10-28 20:25:22] 
+[2025-10-28 20:25:22] Training: syn500_dataset
+[2025-10-28 20:25:22] -
+[2025-10-28 20:25:22]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn500_dataset --dataset syn500_dataset --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn500_dataset-train
+[2025-10-28 21:01:49] [OK] Training completed: syn500_dataset
+[2025-10-28 21:01:49] 
+[2025-10-28 21:01:49] Testing: syn500_dataset
+[2025-10-28 21:01:49] -
+[2025-10-28 21:01:49]    Using model: syn500_dataset-unet-01
+[2025-10-28 21:01:49]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn500_dataset-unet-01 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn500_dataset-test
+[2025-10-28 21:02:16] [OK] Test completed: syn500_dataset
+[2025-10-28 21:02:16] 
+[2025-10-28 21:02:16] =
+[2025-10-28 21:02:16] Dataset: syn750_dataset
+[2025-10-28 21:02:16] =
+[2025-10-28 21:02:16]   Root: ./balloon_dataset/syn750_dataset
+[2025-10-28 21:02:16]   Epochs: 100
+[2025-10-28 21:02:16]   Batch Size: 8
+[2025-10-28 21:02:16]   Patience: 15
+[2025-10-28 21:02:16] 
+[2025-10-28 21:02:16] Training: syn750_dataset
+[2025-10-28 21:02:16] -
+[2025-10-28 21:02:16]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn750_dataset --dataset syn750_dataset --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn750_dataset-train
+[2025-10-28 22:09:00] [OK] Training completed: syn750_dataset
+[2025-10-28 22:09:00] 
+[2025-10-28 22:09:00] Testing: syn750_dataset
+[2025-10-28 22:09:00] -
+[2025-10-28 22:09:00]    Using model: syn750_dataset-unet-01
+[2025-10-28 22:09:00]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn750_dataset-unet-01 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn750_dataset-test
+[2025-10-28 22:09:32] [OK] Test completed: syn750_dataset
+[2025-10-28 22:09:32] 
+[2025-10-28 22:09:32] =
+[2025-10-28 22:09:32] Dataset: syn1000_dataset
+[2025-10-28 22:09:32] =
+[2025-10-28 22:09:32]   Root: ./balloon_dataset/syn1000_dataset
+[2025-10-28 22:09:32]   Epochs: 100
+[2025-10-28 22:09:32]   Batch Size: 8
+[2025-10-28 22:09:32]   Patience: 15
+[2025-10-28 22:09:32] 
+[2025-10-28 22:09:32] Training: syn1000_dataset
+[2025-10-28 22:09:32] -
+[2025-10-28 22:09:32]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn1000_dataset --dataset syn1000_dataset --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn1000_dataset-train
+[2025-10-28 23:36:07] [OK] Training completed: syn1000_dataset
+[2025-10-28 23:36:07] 
+[2025-10-28 23:36:07] Testing: syn1000_dataset
+[2025-10-28 23:36:07] -
+[2025-10-28 23:36:07]    Using model: syn1000_dataset-unet-01
+[2025-10-28 23:36:07]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn1000_dataset-unet-01 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn1000_dataset-test
+[2025-10-28 23:36:34] [OK] Test completed: syn1000_dataset
+[2025-10-28 23:36:34] 
+[2025-10-28 23:36:34] =
+[2025-10-28 23:36:34] Dataset: syn200-corner
+[2025-10-28 23:36:34] =
+[2025-10-28 23:36:34]   Root: ./balloon_dataset/syn200-balloon-corner
+[2025-10-28 23:36:34]   Epochs: 100
+[2025-10-28 23:36:34]   Batch Size: 8
+[2025-10-28 23:36:34]   Patience: 15
+[2025-10-28 23:36:34] 
+[2025-10-28 23:36:34] Training: syn200-corner
+[2025-10-28 23:36:34] -
+[2025-10-28 23:36:34]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn200-balloon-corner --dataset syn200-corner --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn200-corner-train
+[2025-10-28 23:47:52] [OK] Training completed: syn200-corner
+[2025-10-28 23:47:52] 
+[2025-10-28 23:47:52] Testing: syn200-corner
+[2025-10-28 23:47:52] -
+[2025-10-28 23:47:52]    Using model: syn200-corner-unet-02
+[2025-10-28 23:47:52]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn200-corner-unet-02 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn200-corner-test
+[2025-10-28 23:48:18] [OK] Test completed: syn200-corner
+[2025-10-28 23:48:18] 
+[2025-10-28 23:48:18] =
+[2025-10-28 23:48:18] Dataset: syn500-corner
+[2025-10-28 23:48:18] =
+[2025-10-28 23:48:18]   Root: ./balloon_dataset/syn500-balloon-corner
+[2025-10-28 23:48:18]   Epochs: 100
+[2025-10-28 23:48:18]   Batch Size: 8
+[2025-10-28 23:48:18]   Patience: 15
+[2025-10-28 23:48:18] 
+[2025-10-28 23:48:18] Training: syn500-corner
+[2025-10-28 23:48:18] -
+[2025-10-28 23:48:18]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn500-balloon-corner --dataset syn500-corner --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn500-corner-train
+[2025-10-29 00:22:49] [OK] Training completed: syn500-corner
+[2025-10-29 00:22:49] 
+[2025-10-29 00:22:49] Testing: syn500-corner
+[2025-10-29 00:22:49] -
+[2025-10-29 00:22:50]    Using model: syn500-corner-unet-07
+[2025-10-29 00:22:50]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn500-corner-unet-07 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn500-corner-test
+[2025-10-29 00:23:16] [OK] Test completed: syn500-corner
+[2025-10-29 00:23:16] 
+[2025-10-29 00:23:16] =
+[2025-10-29 00:23:16] Dataset: syn750-corner
+[2025-10-29 00:23:16] =
+[2025-10-29 00:23:16]   Root: ./balloon_dataset/syn750-balloon-corner
+[2025-10-29 00:23:16]   Epochs: 100
+[2025-10-29 00:23:16]   Batch Size: 8
+[2025-10-29 00:23:16]   Patience: 15
+[2025-10-29 00:23:16] 
+[2025-10-29 00:23:16] Training: syn750-corner
+[2025-10-29 00:23:16] -
+[2025-10-29 00:23:16]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn750-balloon-corner --dataset syn750-corner --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn750-corner-train
+[2025-10-29 01:28:13] [OK] Training completed: syn750-corner
+[2025-10-29 01:28:13] 
+[2025-10-29 01:28:13] Testing: syn750-corner
+[2025-10-29 01:28:13] -
+[2025-10-29 01:28:13]    Using model: syn750-corner-unet-02
+[2025-10-29 01:28:13]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn750-corner-unet-02 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn750-corner-test
+[2025-10-29 01:28:40] [OK] Test completed: syn750-corner
+[2025-10-29 01:28:40] 
+[2025-10-29 01:28:40] =
+[2025-10-29 01:28:40] Dataset: syn1000-corner
+[2025-10-29 01:28:40] =
+[2025-10-29 01:28:40]   Root: ./balloon_dataset/syn1000-balloon-corner
+[2025-10-29 01:28:40]   Epochs: 100
+[2025-10-29 01:28:40]   Batch Size: 8
+[2025-10-29 01:28:40]   Patience: 15
+[2025-10-29 01:28:40] 
+[2025-10-29 01:28:40] Training: syn1000-corner
+[2025-10-29 01:28:40] -
+[2025-10-29 01:28:40]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn1000-balloon-corner --dataset syn1000-corner --models-dir ./models --epochs 100 --batch 8 --patience 15 --wandb-proj balloon-seg-experiments --run-name syn1000-corner-train
+[2025-10-29 02:59:02] [OK] Training completed: syn1000-corner
+[2025-10-29 02:59:02] 
+[2025-10-29 02:59:02] Testing: syn1000-corner
+[2025-10-29 02:59:02] -
+[2025-10-29 02:59:02]    Using model: syn1000-corner-unet-01
+[2025-10-29 02:59:02]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn1000-corner-unet-01 --models-dir ./models --data-root ./test_dataset --result-dir ./experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn1000-corner-test
+[2025-10-29 02:59:28] [OK] Test completed: syn1000-corner
+[2025-10-29 02:59:28] 
+[2025-10-29 02:59:28] =
+[2025-10-29 02:59:28] Experiments Completed
+[2025-10-29 02:59:28] =
+[2025-10-29 02:59:28] Total datasets: 9
+[2025-10-29 02:59:28] Success: 9
+[2025-10-29 02:59:28] Failed: 0
+[2025-10-29 02:59:28] 
+[2025-10-29 02:59:28] Results: ./experiment_results
+[2025-10-29 02:59:28] Log file: ./experiment_results/experiment_log_20251028_194246.txt
+[2025-10-29 02:59:28] =
