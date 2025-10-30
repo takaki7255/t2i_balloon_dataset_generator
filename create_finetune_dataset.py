@@ -16,10 +16,10 @@ target_category = "balloon"               # 処理対象カテゴリ
 
 # ファインチューニング用データセット設定
 FINETUNE_CONFIG = {
-    "output_root": "finetune100_dataset",     # 出力フォルダ名
-    "total_samples": 100,                   # 総サンプル数（小規模）
+    "output_root": "./balloon_dataset/finetune200_dataset",     # 出力フォルダ名
+    "total_samples": 200,                   # 総サンプル数（小規模）
     "train_ratio": 0.8,                    # train:val = 8:2
-    "seed": 18,                            # ランダムシード
+    "seed": 20,                            # ランダムシード
 }
 
 def create_finetune_dataset():

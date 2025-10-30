@@ -15,8 +15,8 @@ from train_unet_split import (  # 既存実装を再利用
 # --------------------- 設定 ---------------------- #
 CFG = {
     # ★ ① 新しいデータセットルート
-    "ROOT":        Path("finetune100_dataset"),   # train/val 構造は同じにする
-    "IMG_SIZE":    512,
+    "ROOT":        Path("balloon_dataset/finetune200_dataset"),   # train/val 構造は同じにする
+    "IMG_SIZE":    (384, 512),  # (height, width) = 縦384 × 横512 (train_unet_split.pyと同じ)
 
     # ★ ② ハイパーパラメータ（微調整用に小さめ）
     "BATCH":       4,
@@ -27,13 +27,13 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "finetune100_dataset",
+    "DATASET":     "finetune200_dataset",
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
-    "RESUME":      "models/syn750_dataset02-unet-01.pt",
+    "RESUME":      "balloon_models/syn1000-corner-unet-01.pt",
 
-    "MODELS_DIR":  Path("models"),
+    "MODELS_DIR":  Path("balloon_models"),
 
     # 予測可視化
     "SAVE_PRED_EVERY": 5,
@@ -60,9 +60,9 @@ def main():
     va_ds = BalloonDataset(root / "val/images",   root / "val/masks",   cfg["IMG_SIZE"])
 
     tr_dl = torch.utils.data.DataLoader(tr_ds, batch_size=cfg["BATCH"],
-                                        shuffle=True, num_workers=4, pin_memory=True)
+                                        shuffle=True, num_workers=0, pin_memory=False)
     va_dl = torch.utils.data.DataLoader(va_ds, batch_size=cfg["BATCH"],
-                                        shuffle=False, num_workers=4, pin_memory=True)
+                                        shuffle=False, num_workers=0, pin_memory=False)
 
     # ---------- モデル ----------
     model = UNet().to(dev)

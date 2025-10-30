@@ -73,72 +73,23 @@ Write-Host ""
 
 $DATASET_CONFIGS = @(
     @{
-        name = "syn200_allsize_dataset"
-        root = "./balloon_dataset/syn200_allsize_dataset"
+        name = "syn1500-balloon-corner"
+        root = "./balloon_dataset/syn1500-balloon-corner"
         epochs = 100
         batch = 8
-        patience = 15
+        patience = 30
     },
     @{
-        name = "syn200_dataset"
-        root = "./balloon_dataset/syn200_dataset"
+        name = "syn2000-balloon-corner"
+        root = "./balloon_dataset/syn2000-balloon-corner"
         epochs = 100
         batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn500_dataset"
-        root = "./balloon_dataset/syn500_dataset"
-        epochs = 100
-        batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn750_dataset"
-        root = "./balloon_dataset/syn750_dataset"
-        epochs = 100
-        batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn1000_dataset"
-        root = "./balloon_dataset/syn1000_dataset"
-        epochs = 100
-        batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn200-corner"
-        root = "./balloon_dataset/syn200-balloon-corner"
-        epochs = 100
-        batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn500-corner"
-        root = "./balloon_dataset/syn500-balloon-corner"
-        epochs = 100
-        batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn750-corner"
-        root = "./balloon_dataset/syn750-balloon-corner"
-        epochs = 100
-        batch = 8
-        patience = 15
-    },
-    @{
-        name = "syn1000-corner"
-        root = "./balloon_dataset/syn1000-balloon-corner"
-        epochs = 100
-        batch = 8
-        patience = 15
+        patience = 30
     }
 )
 
 # Test dataset
-$TEST_DATA_ROOT = "./test_dataset"
+$TEST_DATA_ROOT = "./balloon_dataset/test100_dataset"
 
 # Model save directory
 $MODELS_DIR = "./balloon_models"

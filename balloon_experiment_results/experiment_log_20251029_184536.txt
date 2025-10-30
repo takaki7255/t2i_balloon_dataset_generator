@@ -1,0 +1,58 @@
+[2025-10-29 18:45:36] =
+[2025-10-29 18:45:36] U-Net Automated Experiments (Conda Environment)
+[2025-10-29 18:45:36] =
+[2025-10-29 18:45:36] Conda Environment: myenv
+[2025-10-29 18:45:36] Mode: Train + Test
+[2025-10-29 18:45:36] Wandb: Enabled
+[2025-10-29 18:45:36] Datasets: 2
+[2025-10-29 18:45:36] Log File: ./balloon_experiment_results/experiment_log_20251029_184536.txt
+[2025-10-29 18:45:36] 
+[2025-10-29 18:45:36] 
+[2025-10-29 18:45:36] =
+[2025-10-29 18:45:36] Dataset: syn1500_dataset
+[2025-10-29 18:45:36] =
+[2025-10-29 18:45:36]   Root: ./balloon_dataset/syn1500_dataset
+[2025-10-29 18:45:36]   Epochs: 100
+[2025-10-29 18:45:36]   Batch Size: 8
+[2025-10-29 18:45:36]   Patience: 30
+[2025-10-29 18:45:36] 
+[2025-10-29 18:45:36] Training: syn1500_dataset
+[2025-10-29 18:45:36] -
+[2025-10-29 18:45:36]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn1500_dataset --dataset syn1500_dataset --models-dir ./balloon_models --epochs 100 --batch 8 --patience 30 --wandb-proj balloon-seg-experiments --run-name syn1500_dataset-train
+[2025-10-29 20:48:09] [OK] Training completed: syn1500_dataset
+[2025-10-29 20:48:09] 
+[2025-10-29 20:48:09] Testing: syn1500_dataset
+[2025-10-29 20:48:09] -
+[2025-10-29 20:48:09]    Using model: syn1500_dataset-unet-02
+[2025-10-29 20:48:09]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn1500_dataset-unet-02 --models-dir ./balloon_models --data-root ./balloon_dataset/test100_dataset --result-dir ./balloon_experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn1500_dataset-test
+[2025-10-29 20:48:40] [OK] Test completed: syn1500_dataset
+[2025-10-29 20:48:40] 
+[2025-10-29 20:48:40] =
+[2025-10-29 20:48:40] Dataset: syn2000_dataset
+[2025-10-29 20:48:40] =
+[2025-10-29 20:48:40]   Root: ./balloon_dataset/syn2000_dataset
+[2025-10-29 20:48:40]   Epochs: 100
+[2025-10-29 20:48:40]   Batch Size: 8
+[2025-10-29 20:48:40]   Patience: 30
+[2025-10-29 20:48:40] 
+[2025-10-29 20:48:40] Training: syn2000_dataset
+[2025-10-29 20:48:40] -
+[2025-10-29 20:48:40]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./balloon_dataset/syn2000_dataset --dataset syn2000_dataset --models-dir ./balloon_models --epochs 100 --batch 8 --patience 30 --wandb-proj balloon-seg-experiments --run-name syn2000_dataset-train
+[2025-10-29 23:57:55] [OK] Training completed: syn2000_dataset
+[2025-10-29 23:57:55] 
+[2025-10-29 23:57:55] Testing: syn2000_dataset
+[2025-10-29 23:57:55] -
+[2025-10-29 23:57:55]    Using model: syn2000_dataset-unet-02
+[2025-10-29 23:57:55]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn2000_dataset-unet-02 --models-dir ./balloon_models --data-root ./balloon_dataset/test100_dataset --result-dir ./balloon_experiment_results --batch 8 --wandb-proj balloon-seg-experiments --run-name syn2000_dataset-test
+[2025-10-29 23:58:26] [OK] Test completed: syn2000_dataset
+[2025-10-29 23:58:26] 
+[2025-10-29 23:58:26] =
+[2025-10-29 23:58:26] Experiments Completed
+[2025-10-29 23:58:26] =
+[2025-10-29 23:58:26] Total datasets: 2
+[2025-10-29 23:58:26] Success: 2
+[2025-10-29 23:58:26] Failed: 0
+[2025-10-29 23:58:26] 
+[2025-10-29 23:58:26] Results: ./balloon_experiment_results
+[2025-10-29 23:58:26] Log file: ./balloon_experiment_results/experiment_log_20251029_184536.txt
+[2025-10-29 23:58:26] =
