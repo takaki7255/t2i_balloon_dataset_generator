@@ -73,15 +73,36 @@ Write-Host ""
 
 $DATASET_CONFIGS = @(
     @{
-        name = "syn1500-balloon-corner"
-        root = "./balloon_dataset/syn1500-balloon-corner"
+        name = "real200_dataset"
+        root = "./onomatopoeia_dataset/real200_dataset"
         epochs = 100
         batch = 8
         patience = 30
     },
     @{
-        name = "syn2000-balloon-corner"
-        root = "./balloon_dataset/syn2000-balloon-corner"
+        name = "syn200"
+        root = "./onomatopoeia_dataset/syn200"
+        epochs = 100
+        batch = 8
+        patience = 30
+    },
+    @{
+        name = "syn200-panel"
+        root = "./onomatopoeia_dataset/syn200-panel"
+        epochs = 100
+        batch = 8
+        patience = 30
+    },
+    @{
+        name = "syn500"
+        root = "./onomatopoeia_dataset/syn500"
+        epochs = 100
+        batch = 8
+        patience = 30
+    },
+    @{
+        name = "syn500-panel"
+        root = "./onomatopoeia_dataset/syn500-panel"
         epochs = 100
         batch = 8
         patience = 30
@@ -89,16 +110,16 @@ $DATASET_CONFIGS = @(
 )
 
 # Test dataset
-$TEST_DATA_ROOT = "./balloon_dataset/test100_dataset"
+$TEST_DATA_ROOT = "./onomatopoeia_dataset/test100_dataset"
 
 # Model save directory
-$MODELS_DIR = "./balloon_models"
+$MODELS_DIR = "./onomatopoeia_models"
 
 # Results save directory
-$RESULTS_DIR = "./balloon_experiment_results"
+$RESULTS_DIR = "./onomatopoeia_experiment_results"
 
 # Wandb project name
-$WANDB_PROJECT = "balloon-seg-experiments"
+$WANDB_PROJECT = "onomatopoeia-seg-experiments"
 
 # ============================================================================
 # Dataset filtering

@@ -1,0 +1,35 @@
+{
+  "model_tag": "real200_dataset-unet-01",
+  "data_root": "onomatopoeia_dataset\\test100_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-10-30T20:14:01.162645",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.36070005977164826,
+      "iou": 0.24874215517606874,
+      "precision": 0.40850379879018606,
+      "recall": 0.378981906238017,
+      "f1_score": 0.3607000214383602
+    },
+    "global_metrics": {
+      "dice": 0.4683355401509562,
+      "iou": 0.30576901953911884,
+      "precision": 0.5027995745446073,
+      "recall": 0.4382930584061635,
+      "f1_score": 0.46833549038573147,
+      "accuracy": 0.9913202412923127
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.2492975637434689,
+    "iou_std": 0.19041242659902208,
+    "precision_std": 0.28291512859482937,
+    "recall_std": 0.2693920748783724,
+    "f1_std": 0.24929755117035712
+  }
+}

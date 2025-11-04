@@ -1,0 +1,103 @@
+[2025-10-30 19:54:46] =
+[2025-10-30 19:54:46] U-Net Automated Experiments (Conda Environment)
+[2025-10-30 19:54:46] =
+[2025-10-30 19:54:46] Conda Environment: myenv
+[2025-10-30 19:54:46] Mode: Train + Test
+[2025-10-30 19:54:46] Wandb: Enabled
+[2025-10-30 19:54:46] Datasets: 5
+[2025-10-30 19:54:46] Log File: ./onomatopoeia_experiment_results/experiment_log_20251030_195446.txt
+[2025-10-30 19:54:46] 
+[2025-10-30 19:54:46] 
+[2025-10-30 19:54:46] =
+[2025-10-30 19:54:46] Dataset: real200_dataset
+[2025-10-30 19:54:46] =
+[2025-10-30 19:54:46]   Root: ./onomatopoeia_dataset/real200_dataset
+[2025-10-30 19:54:46]   Epochs: 100
+[2025-10-30 19:54:46]   Batch Size: 8
+[2025-10-30 19:54:46]   Patience: 30
+[2025-10-30 19:54:46] 
+[2025-10-30 19:54:46] Training: real200_dataset
+[2025-10-30 19:54:46] -
+[2025-10-30 19:54:46]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./onomatopoeia_dataset/real200_dataset --dataset real200_dataset --models-dir ./onomatopoeia_models --epochs 100 --batch 8 --patience 30 --wandb-proj onomatopoeia-seg-experiments --run-name real200_dataset-train
+[2025-10-30 20:13:37] [OK] Training completed: real200_dataset
+[2025-10-30 20:13:37] 
+[2025-10-30 20:13:37] Testing: real200_dataset
+[2025-10-30 20:13:37] -
+[2025-10-30 20:13:37]    Using model: real200_dataset-unet-01
+[2025-10-30 20:13:37]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag real200_dataset-unet-01 --models-dir ./onomatopoeia_models --data-root ./onomatopoeia_dataset/test100_dataset --result-dir ./onomatopoeia_experiment_results --batch 8 --wandb-proj onomatopoeia-seg-experiments --run-name real200_dataset-test
+[2025-10-30 20:14:04] [OK] Test completed: real200_dataset
+[2025-10-30 20:14:04] 
+[2025-10-30 20:14:04] =
+[2025-10-30 20:14:04] Dataset: syn200
+[2025-10-30 20:14:04] =
+[2025-10-30 20:14:04]   Root: ./onomatopoeia_dataset/syn200
+[2025-10-30 20:14:04]   Epochs: 100
+[2025-10-30 20:14:04]   Batch Size: 8
+[2025-10-30 20:14:04]   Patience: 30
+[2025-10-30 20:14:04] 
+[2025-10-30 20:14:04] Training: syn200
+[2025-10-30 20:14:04] -
+[2025-10-30 20:14:04]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./onomatopoeia_dataset/syn200 --dataset syn200 --models-dir ./onomatopoeia_models --epochs 100 --batch 8 --patience 30 --wandb-proj onomatopoeia-seg-experiments --run-name syn200-train
+[2025-10-30 20:36:25] [OK] Training completed: syn200
+[2025-10-30 20:36:25] 
+[2025-10-30 20:36:25] Testing: syn200
+[2025-10-30 20:36:25] -
+[2025-10-30 20:36:25]    Using model: syn200-unet-01
+[2025-10-30 20:36:25]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn200-unet-01 --models-dir ./onomatopoeia_models --data-root ./onomatopoeia_dataset/test100_dataset --result-dir ./onomatopoeia_experiment_results --batch 8 --wandb-proj onomatopoeia-seg-experiments --run-name syn200-test
+[2025-10-30 20:36:52] [OK] Test completed: syn200
+[2025-10-30 20:36:52] 
+[2025-10-30 20:36:52] =
+[2025-10-30 20:36:52] Dataset: syn200-panel
+[2025-10-30 20:36:52] =
+[2025-10-30 20:36:52]   Root: ./onomatopoeia_dataset/syn200-panel
+[2025-10-30 20:36:52]   Epochs: 100
+[2025-10-30 20:36:52]   Batch Size: 8
+[2025-10-30 20:36:52]   Patience: 30
+[2025-10-30 20:36:52] 
+[2025-10-30 20:36:52] Training: syn200-panel
+[2025-10-30 20:36:52] -
+[2025-10-30 20:36:52]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./onomatopoeia_dataset/syn200-panel --dataset syn200-panel --models-dir ./onomatopoeia_models --epochs 100 --batch 8 --patience 30 --wandb-proj onomatopoeia-seg-experiments --run-name syn200-panel-train
+[2025-10-30 20:37:00] [FAIL] Training failed: syn200-panel (exit code: 1)
+[2025-10-30 20:37:00] 
+[2025-10-30 20:37:00] =
+[2025-10-30 20:37:00] Dataset: syn500
+[2025-10-30 20:37:00] =
+[2025-10-30 20:37:00]   Root: ./onomatopoeia_dataset/syn500
+[2025-10-30 20:37:00]   Epochs: 100
+[2025-10-30 20:37:00]   Batch Size: 8
+[2025-10-30 20:37:00]   Patience: 30
+[2025-10-30 20:37:00] 
+[2025-10-30 20:37:00] Training: syn500
+[2025-10-30 20:37:00] -
+[2025-10-30 20:37:00]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./onomatopoeia_dataset/syn500 --dataset syn500 --models-dir ./onomatopoeia_models --epochs 100 --batch 8 --patience 30 --wandb-proj onomatopoeia-seg-experiments --run-name syn500-train
+[2025-10-30 21:38:32] [OK] Training completed: syn500
+[2025-10-30 21:38:32] 
+[2025-10-30 21:38:32] Testing: syn500
+[2025-10-30 21:38:32] -
+[2025-10-30 21:38:32]    Using model: syn500-unet-01
+[2025-10-30 21:38:32]   Command: conda run -n myenv --no-capture-output python test_unet.py --model-tag syn500-unet-01 --models-dir ./onomatopoeia_models --data-root ./onomatopoeia_dataset/test100_dataset --result-dir ./onomatopoeia_experiment_results --batch 8 --wandb-proj onomatopoeia-seg-experiments --run-name syn500-test
+[2025-10-30 21:38:58] [OK] Test completed: syn500
+[2025-10-30 21:38:58] 
+[2025-10-30 21:38:58] =
+[2025-10-30 21:38:58] Dataset: syn500-panel
+[2025-10-30 21:38:58] =
+[2025-10-30 21:38:58]   Root: ./onomatopoeia_dataset/syn500-panel
+[2025-10-30 21:38:58]   Epochs: 100
+[2025-10-30 21:38:58]   Batch Size: 8
+[2025-10-30 21:38:58]   Patience: 30
+[2025-10-30 21:38:58] 
+[2025-10-30 21:38:58] Training: syn500-panel
+[2025-10-30 21:38:58] -
+[2025-10-30 21:38:58]   Command: conda run -n myenv --no-capture-output python train_unet_split.py --root ./onomatopoeia_dataset/syn500-panel --dataset syn500-panel --models-dir ./onomatopoeia_models --epochs 100 --batch 8 --patience 30 --wandb-proj onomatopoeia-seg-experiments --run-name syn500-panel-train
+[2025-10-30 21:39:05] [FAIL] Training failed: syn500-panel (exit code: 1)
+[2025-10-30 21:39:05] 
+[2025-10-30 21:39:05] =
+[2025-10-30 21:39:05] Experiments Completed
+[2025-10-30 21:39:05] =
+[2025-10-30 21:39:05] Total datasets: 5
+[2025-10-30 21:39:05] Success: 3
+[2025-10-30 21:39:05] Failed: 2
+[2025-10-30 21:39:05] 
+[2025-10-30 21:39:05] Results: ./onomatopoeia_experiment_results
+[2025-10-30 21:39:05] Log file: ./onomatopoeia_experiment_results/experiment_log_20251030_195446.txt
+[2025-10-30 21:39:05] =

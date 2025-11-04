@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: real200_dataset-unet-01
+Dataset: onomatopoeia_dataset\test100_dataset
+Image Size: (384, 512)
+Total Images: 100
+Evaluation Time: 2025-10-30 20:14:01
+
+Average Metrics (per image):
+  Dice Score: 0.3607 ± 0.2493
+  IoU:        0.2487 ± 0.1904
+  Precision:  0.4085 ± 0.2829
+  Recall:     0.3790 ± 0.2694
+  F1 Score:   0.3607 ± 0.2493
+
+Global Metrics (all pixels):
+  Dice Score: 0.4683
+  IoU:        0.3058
+  Precision:  0.5028
+  Recall:     0.4383
+  F1 Score:   0.4683
+  Accuracy:   0.9913
