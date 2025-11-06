@@ -11,7 +11,7 @@ Command Line Usage Examples:
 python test_unet.py --model-tag syn500-corner-unet-01
 
 # Specify custom paths
-python test_unet.py --model-tag syn500-corner-unet-01 --data-root ./test_dataset --models-dir ./balloon_models
+python test_unet.py --model-tag syn1000-corner-unet-01 --data-root balloon_dataset/test100_dataset --models-dir ./balloon_models
 
 # Full configuration example
 python test_unet.py \

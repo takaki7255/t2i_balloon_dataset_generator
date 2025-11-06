@@ -15,7 +15,7 @@ from train_unet_split import (  # 既存実装を再利用
 # --------------------- 設定 ---------------------- #
 CFG = {
     # ★ ① 新しいデータセットルート
-    "ROOT":        Path("balloon_dataset/finetune200_dataset"),   # train/val 構造は同じにする
+    "ROOT":        Path("balloon_dataset/syn1000-balloon-corner"),   # train/val 構造は同じにする
     "IMG_SIZE":    (384, 512),  # (height, width) = 縦384 × 横512 (train_unet_split.pyと同じ)
 
     # ★ ② ハイパーパラメータ（微調整用に小さめ）
@@ -27,11 +27,11 @@ CFG = {
 
     # wandb
     "WANDB_PROJ":  "balloon-seg",
-    "DATASET":     "finetune200_dataset",
+    "DATASET":     "syn1000-balloon-corner",
     "RUN_NAME":    "",
 
     # ★ ③ 事前学習済み ckpt を指定
-    "RESUME":      "balloon_models/syn1000-corner-unet-01.pt",
+    "RESUME":      "balloon_models/real200_dataset-unet-01.pt",
 
     "MODELS_DIR":  Path("balloon_models"),
 

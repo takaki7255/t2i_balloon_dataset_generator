@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn1000-corner-unet-01
+Dataset: balloon_dataset\test100_dataset
+Image Size: (384, 512)
+Total Images: 100
+Evaluation Time: 2025-11-05 03:36:48
+
+Average Metrics (per image):
+  Dice Score: 0.8186 ± 0.1992
+  IoU:        0.7284 ± 0.2149
+  Precision:  0.8180 ± 0.2095
+  Recall:     0.8485 ± 0.2007
+  F1 Score:   0.8186 ± 0.1992
+
+Global Metrics (all pixels):
+  Dice Score: 0.8698
+  IoU:        0.7696
+  Precision:  0.8724
+  Recall:     0.8672
+  F1 Score:   0.8698
+  Accuracy:   0.9698
