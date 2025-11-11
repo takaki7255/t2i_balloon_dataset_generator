@@ -214,6 +214,9 @@ def composite_random_balloons_enhanced(background_path: str, balloon_mask_pairs:
     max_balloons = min(num_balloons_range[1], len(balloon_mask_pairs))
     num_balloons = sample_num_balloons(cfg, max_balloons)
     
+    # 安全策: num_balloonsがballoon_mask_pairsの数を超えないようにする
+    num_balloons = min(num_balloons, len(balloon_mask_pairs))
+    
     # ランダムに吹き出しを選択
     selected_pairs = random.sample(balloon_mask_pairs, num_balloons)
     
@@ -482,19 +485,20 @@ def main():
     """メイン処理"""
     
     # パス設定
-    balloons_dir = "balloons"
-    masks_dir = "balloon_masks"
-    backgrounds_dir = "generated_double_backs_1536x1024"
+    balloons_dir = "balloons/images/"
+    masks_dir = "balloons/masks/"
+    # backgrounds_dir = "generated_double_backs_1536x1024"
+    backgrounds_dir = "backs_real"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
-    final_output_dir = "balloon_dataset/syn2000_dataset"
+    final_output_dir = "balloon_dataset/synballoons_realbacks_200"
 
     # 設定（実際の統計データに基づいて精密調整）
     CFG = {
         "SCALE_RANGE": (0.070, 0.120),      # 実際の生成結果に基づいて範囲を調整
         "NUM_BALLOONS_RANGE": (9, 17),      # 統計で7個は1.4%と稀少なため9個から開始
         "MAX_ATTEMPTS": 200,                 # 配置試行回数
-        "TARGET_TOTAL_IMAGES": 2000,          # 総生成画像数（本番用に戻す）
+        "TARGET_TOTAL_IMAGES": 200,          # 総生成画像数（本番用に戻す）
         "TRAIN_RATIO": 0.8,                  # train用の比率
         "BALLOON_SPLIT_SEED": 10,            # 吹き出し分割のランダムシード
         

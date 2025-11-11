@@ -54,8 +54,8 @@ def rename_images(directory):
 def generate_all_masks():
     """画像をリネームしてからマスクを生成"""
     
-    balloons_dir = "balloons"
-    masks_dir = "balloon_masks"
+    balloons_dir = "balloons/images/"
+    masks_dir = "balloons/masks/"
     
     # 1. まず画像ファイルを通し番号にリネーム
     print("=== 画像ファイルのリネーム ===")
