@@ -96,6 +96,7 @@ CFG = {
     "PRETRAINED":  True,        # ImageNet pretrained weights
     "OUTPUT_STRIDE": 16,        # 8 or 16
     "FREEZE_EPOCHS": 0,         # バックボーン固定エポック数（0=固定しない）
+    "IMAGENET_NORM": True,      # ImageNet正規化（pretrainedモデル使用時は推奨）
 
     # 学習
     "BATCH":       8,
@@ -204,7 +205,7 @@ def print_system_info():
 
 # ---------------- Dataset ----------------
 class BalloonDataset(Dataset):
-    def __init__(self, img_dir, mask_dir, img_size):
+    def __init__(self, img_dir, mask_dir, img_size, imagenet_norm=True):
         self.img_paths = sorted(glob.glob(str(img_dir / "*.png")))
         if not self.img_paths:
             self.img_paths = sorted(glob.glob(str(img_dir / "*.jpg")))
@@ -217,10 +218,20 @@ class BalloonDataset(Dataset):
         else:
             resize_size = (img_size, img_size)
         
-        self.img_tf = transforms.Compose([
-            transforms.Resize(resize_size),
-            transforms.ToTensor(),
-        ])
+        # ImageNet正規化パラメータ
+        if imagenet_norm:
+            self.img_tf = transforms.Compose([
+                transforms.Resize(resize_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                   std=[0.229, 0.224, 0.225])
+            ])
+        else:
+            self.img_tf = transforms.Compose([
+                transforms.Resize(resize_size),
+                transforms.ToTensor(),
+            ])
+        
         self.mask_tf = transforms.Compose([
             transforms.Resize(resize_size, interpolation=Image.NEAREST),
             transforms.ToTensor(),
@@ -466,6 +477,10 @@ def parse_args():
                         help='Wandb project name (default: use CFG["WANDB_PROJ"])')
     parser.add_argument('--run-name', type=str, default=None,
                         help='Wandb run name (default: auto-generated)')
+    parser.add_argument('--imagenet-norm', action='store_true',
+                        help='Use ImageNet normalization (recommended with pretrained)')
+    parser.add_argument('--no-imagenet-norm', action='store_true',
+                        help='Don\'t use ImageNet normalization')
     
     return parser.parse_args()
 
@@ -534,6 +549,14 @@ def main():
         cfg["RUN_NAME"] = args.run_name
         print(f"🏷️  Run name: {cfg['RUN_NAME']}")
     
+    # ImageNet正規化フラグの処理
+    if args.imagenet_norm:
+        cfg["IMAGENET_NORM"] = True
+        print(f"✅ Using ImageNet normalization")
+    elif args.no_imagenet_norm:
+        cfg["IMAGENET_NORM"] = False
+        print(f"🔧 Not using ImageNet normalization")
+    
     seed_everything(cfg["SEED"])
     dev="cuda" if torch.cuda.is_available() else "cpu"
     
@@ -565,8 +588,8 @@ def main():
     run_dir = Path(wandb.run.dir)
 
     root=cfg["ROOT"]
-    train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"])
-    val_ds  =BalloonDataset(root/"val/images"  ,root/"val/masks"  ,cfg["IMG_SIZE"])
+    train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"],cfg["IMAGENET_NORM"])
+    val_ds  =BalloonDataset(root/"val/images"  ,root/"val/masks"  ,cfg["IMG_SIZE"],cfg["IMAGENET_NORM"])
 
     dl_tr=DataLoader(train_ds,batch_size=cfg["BATCH"],shuffle=True ,num_workers=0,pin_memory=False)
     dl_va=DataLoader(val_ds  ,batch_size=cfg["BATCH"],shuffle=False,num_workers=0,pin_memory=False)

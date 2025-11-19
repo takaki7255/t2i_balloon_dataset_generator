@@ -96,6 +96,7 @@ CFG = {
     "BACKBONE":    "resnet50",  # "resnet50" or "resnet101"
     "OUTPUT_STRIDE": 16,        # 8 or 16
     "DATA_ROOT":   Path("test_dataset"),
+    "IMAGENET_NORM": True,      # ImageNet正規化（pretrainedモデル使用時は推奨）
     # ----------------------------------
     "IMG_SIZE":    (384, 512),
     "BATCH":       8,
@@ -117,7 +118,7 @@ def seed_everything(seed):
 
 # ---------------- Dataset ----------------
 class BalloonDataset(Dataset):
-    def __init__(self, img_dir, mask_dir, img_size):
+    def __init__(self, img_dir, mask_dir, img_size, imagenet_norm=True):
         self.img_paths = sorted(glob.glob(str(img_dir/"*.png")))
         if not self.img_paths:
             self.img_paths = sorted(glob.glob(str(img_dir/"*.jpg")))
@@ -131,9 +132,20 @@ class BalloonDataset(Dataset):
         else:
             resize_size = (img_size, img_size)
         
-        self.img_tf = transforms.Compose([
-            transforms.Resize(resize_size), transforms.ToTensor()
-        ])
+        # ImageNet正規化パラメータ
+        if imagenet_norm:
+            self.img_tf = transforms.Compose([
+                transforms.Resize(resize_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                   std=[0.229, 0.224, 0.225])
+            ])
+        else:
+            self.img_tf = transforms.Compose([
+                transforms.Resize(resize_size),
+                transforms.ToTensor()
+            ])
+        
         self.mask_tf = transforms.Compose([
             transforms.Resize(resize_size, interpolation=Image.NEAREST),
             transforms.ToTensor()
@@ -453,7 +465,8 @@ def main():
     # ---------- data ----------
     test_ds = BalloonDataset(cfg["DATA_ROOT"] / "images",
                             cfg["DATA_ROOT"] / "masks",
-                            cfg["IMG_SIZE"])
+                            cfg["IMG_SIZE"],
+                            cfg["IMAGENET_NORM"])
     dl = DataLoader(test_ds, batch_size=cfg["BATCH"], shuffle=False,
                     num_workers=4, pin_memory=True)
 

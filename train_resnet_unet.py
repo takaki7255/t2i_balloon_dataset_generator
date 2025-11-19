@@ -82,6 +82,7 @@ CFG = {
     # データセット
     "ROOT":        Path("./balloon_dataset/real200_dataset"),
     "IMG_SIZE":    (384, 512),  # (height, width)
+    "IMAGENET_NORM": True,      # ImageNet正規化 (pretrained推奨)
 
     # モデル
     "BACKBONE":    "resnet34",  # "resnet34" or "resnet50"
@@ -195,7 +196,7 @@ def print_system_info():
 
 # ---------------- Dataset ----------------
 class BalloonDataset(Dataset):
-    def __init__(self, img_dir, mask_dir, img_size):
+    def __init__(self, img_dir, mask_dir, img_size, imagenet_norm=True):
         self.img_paths = sorted(glob.glob(str(img_dir / "*.png")))
         if not self.img_paths:
             self.img_paths = sorted(glob.glob(str(img_dir / "*.jpg")))
@@ -208,10 +209,20 @@ class BalloonDataset(Dataset):
         else:
             resize_size = (img_size, img_size)
         
-        self.img_tf = transforms.Compose([
-            transforms.Resize(resize_size),
-            transforms.ToTensor(),
-        ])
+        # ImageNet正規化パラメータ
+        if imagenet_norm:
+            self.img_tf = transforms.Compose([
+                transforms.Resize(resize_size),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], 
+                                   std=[0.229, 0.224, 0.225])
+            ])
+        else:
+            self.img_tf = transforms.Compose([
+                transforms.Resize(resize_size),
+                transforms.ToTensor(),
+            ])
+        
         self.mask_tf = transforms.Compose([
             transforms.Resize(resize_size, interpolation=Image.NEAREST),
             transforms.ToTensor(),
@@ -435,6 +446,10 @@ def parse_args():
                         help='Don\'t use pretrained weights (train from scratch)')
     parser.add_argument('--freeze-epochs', type=int, default=None,
                         help='Number of epochs to freeze backbone (default: use CFG["FREEZE_EPOCHS"])')
+    parser.add_argument('--imagenet-norm', action='store_true',
+                        help='Use ImageNet normalization (recommended with pretrained)')
+    parser.add_argument('--no-imagenet-norm', action='store_true',
+                        help='Don\'t use ImageNet normalization')
     parser.add_argument('--models-dir', type=str, default=None,
                         help='Models directory (default: use CFG["MODELS_DIR"])')
     parser.add_argument('--resume', type=str, default=None,
@@ -486,6 +501,14 @@ def main():
     if args.freeze_epochs is not None:
         cfg["FREEZE_EPOCHS"] = args.freeze_epochs
         print(f"❄️  Freeze backbone for {cfg['FREEZE_EPOCHS']} epochs")
+    
+    # ImageNet正規化フラグの処理
+    if args.imagenet_norm:
+        cfg["IMAGENET_NORM"] = True
+        print(f"✅ Using ImageNet normalization")
+    elif args.no_imagenet_norm:
+        cfg["IMAGENET_NORM"] = False
+        print(f"🔧 Not using ImageNet normalization")
     
     if args.models_dir:
         cfg["MODELS_DIR"] = Path(args.models_dir)
@@ -550,8 +573,8 @@ def main():
     run_dir = Path(wandb.run.dir)
 
     root=cfg["ROOT"]
-    train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"])
-    val_ds  =BalloonDataset(root/"val/images"  ,root/"val/masks"  ,cfg["IMG_SIZE"])
+    train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"],cfg["IMAGENET_NORM"])
+    val_ds  =BalloonDataset(root/"val/images"  ,root/"val/masks"  ,cfg["IMG_SIZE"],cfg["IMAGENET_NORM"])
 
     dl_tr=DataLoader(train_ds,batch_size=cfg["BATCH"],shuffle=True ,num_workers=0,pin_memory=False)
     dl_va=DataLoader(val_ds  ,batch_size=cfg["BATCH"],shuffle=False,num_workers=0,pin_memory=False)
