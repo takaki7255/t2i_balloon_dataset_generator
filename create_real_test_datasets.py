@@ -17,8 +17,8 @@ target_category = "onomatopoeia"                                   # 処理対�
 # データセット設定（target_categoryベースで出力先を決定）
 datasets = {
     "real_dataset": {
-        "output_root": f"./{target_category}_dataset/real200_dataset",
-        "num_samples": 200,
+        "output_root": f"./{target_category}_dataset/real1000_dataset",
+        "num_samples": 1000,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {

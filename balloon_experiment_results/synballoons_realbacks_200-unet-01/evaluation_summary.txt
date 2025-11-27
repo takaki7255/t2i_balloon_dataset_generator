@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: synballoons_realbacks_200-unet-01
+Dataset: balloon_dataset\test100_dataset
+Image Size: (384, 512)
+Total Images: 100
+Evaluation Time: 2025-11-27 20:55:20
+
+Average Metrics (per image):
+  Dice Score: 0.5054 ± 0.2223
+  IoU:        0.3680 ± 0.2034
+  Precision:  0.8461 ± 0.1964
+  Recall:     0.4024 ± 0.2314
+  F1 Score:   0.5054 ± 0.2223
+
+Global Metrics (all pixels):
+  Dice Score: 0.5229
+  IoU:        0.3540
+  Precision:  0.8862
+  Recall:     0.3709
+  F1 Score:   0.5229
+  Accuracy:   0.9212

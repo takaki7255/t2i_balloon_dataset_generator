@@ -692,6 +692,7 @@ def main():
             # models/ にもコピー（固定ファイル名）
             ckpt_models = CFG["MODELS_DIR"] / f"{model_tag}.pt"
             torch.save(model.state_dict(), ckpt_models)
+            print(f"✓ Best model saved! IoU: {va_iou:.4f} -> {ckpt_models}")
         else:
             patience+=1
             if patience>=cfg["PATIENCE"]:

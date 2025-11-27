@@ -100,6 +100,7 @@ def main():
             best_iou, patience = va_iou, 0
             ckpt = cfg["MODELS_DIR"] / f"{base_model_name}-{cfg['DATASET']}-finetuned.pt"
             torch.save(model.state_dict(), ckpt)
+            print(f"✓ Best model saved! IoU: {va_iou:.4f} -> {ckpt}")
         else:
             patience += 1
             if patience >= cfg["PATIENCE"]:
