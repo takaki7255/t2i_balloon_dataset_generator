@@ -593,8 +593,8 @@ def composite_corner_aligned_balloons(background_path: str, balloon_mask_pairs: 
     if num_balloons_total == 0:
         return background, np.zeros((bg_h, bg_w), dtype=np.uint8), [], []
     
-    # 角配置とランダム配置の比率を決定（デフォルト: 角30%, ランダム70%）
-    corner_placement_ratio = cfg.get("CORNER_PLACEMENT_RATIO", 0.3)
+    # 角配置とランダム配置の比率を決定（デフォルト: 角40%, ランダム60%）
+    corner_placement_ratio = cfg.get("CORNER_PLACEMENT_RATIO", 0.4)
     num_corner_balloons = int(num_balloons_total * corner_placement_ratio)
     num_random_balloons = num_balloons_total - num_corner_balloons
     
@@ -885,15 +885,15 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
 def main():
     """メイン処理"""
     parser = argparse.ArgumentParser(description="コマの角に合わせた吹き出し合成データセット作成")
-    parser.add_argument("--balloon-dir", required=True, help="吹き出し画像ディレクトリ")
-    parser.add_argument("--mask-dir", required=True, help="マスク画像ディレクトリ")
-    parser.add_argument("--background-dir", required=True, help="背景画像ディレクトリ")
-    parser.add_argument("--output-dir", required=True, help="出力画像ディレクトリ")
-    parser.add_argument("--mask-output-dir", required=True, help="出力マスクディレクトリ")
-    parser.add_argument("--final-output-dir", default="corner_aligned_dataset", help="最終出力ディレクトリ")
-    parser.add_argument("--corner-ratio", type=float, default=0.3, help="角の切り取り比率")
-    parser.add_argument("--target-images", type=int, default=100, help="生成する画像数")
-    parser.add_argument("--train-ratio", type=float, default=0.8, help="train用の比率")
+    parser.add_argument("--balloon-dir", required=False, default="balloons", help="吹き出し画像ディレクトリ")
+    parser.add_argument("--mask-dir", required=False, default="balloon_masks", help="マスク画像ディレクトリ")
+    parser.add_argument("--background-dir", required=False, default="generated_double_backs_1536x1024", help="背景画像ディレクトリ")
+    parser.add_argument("--output-dir", required=False, default="temp_corner_output", help="中間出力画像ディレクトリ（一時的）")
+    parser.add_argument("--mask-output-dir", required=False, default="temp_corner_masks", help="中間出力マスクディレクトリ（一時的）")
+    parser.add_argument("--final-output-dir", required=True, default="balloon_dataset/syn500-corner", help="最終出力ディレクトリ（train/val分割後）")
+    parser.add_argument("--corner-ratio", type=float, default=0.3, help="角の切り取り比率（0.0-1.0、コマの角から何%を角領域とするか）")
+    parser.add_argument("--target-images", required=True, type=int, default=500, help="生成する画像総数")
+    parser.add_argument("--train-ratio", type=float, default=0.8, help="train用の比率（残りがval）")
     
     args = parser.parse_args()
     
@@ -904,7 +904,7 @@ def main():
     # 設定
     CFG = {
         "SCALE_RANGE": (0.070, 0.120),
-        "NUM_BALLOONS_RANGE": (1, 5),  # コーナーアライメント用に調整
+        "NUM_BALLOONS_RANGE": (5, 17),  # 下限を5に設定（統計で5個は3.2%）
         "MAX_ATTEMPTS": 100,
         "TRAIN_RATIO": args.train_ratio,
         "BALLOON_SPLIT_SEED": 39,

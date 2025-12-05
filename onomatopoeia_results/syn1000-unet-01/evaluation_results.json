@@ -1,0 +1,35 @@
+{
+  "model_tag": "syn1000-unet-01",
+  "data_root": "onomatopoeia_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-05T03:57:41.198036",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.19822136439319077,
+      "iou": 0.12487202174778607,
+      "precision": 0.19053652459914977,
+      "recall": 0.27556433102966066,
+      "f1_score": 0.19822133259734218
+    },
+    "global_metrics": {
+      "dice": 0.2884670633251624,
+      "iou": 0.1685430979117443,
+      "precision": 0.24219834800880918,
+      "recall": 0.3565884610316151,
+      "f1_score": 0.2884670151498929,
+      "accuracy": 0.9855133904351112
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.1970435140427246,
+    "iou_std": 0.13693017156880888,
+    "precision_std": 0.20687799415391767,
+    "recall_std": 0.2611808365145349,
+    "f1_std": 0.19704350097509254
+  }
+}

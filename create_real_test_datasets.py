@@ -17,13 +17,13 @@ target_category = "onomatopoeia"                                   # 処理対�
 # データセット設定（target_categoryベースで出力先を決定）
 datasets = {
     "real_dataset": {
-        "output_root": f"./{target_category}_dataset/real1000_dataset",
-        "num_samples": 1000,
+        "output_root": f"./{target_category}_dataset/real3000_dataset",
+        "num_samples": 3000,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {
-        "output_root": f"./{target_category}_dataset/test100_dataset", 
-        "num_samples": 100,
+        "output_root": f"./{target_category}_dataset/test300_dataset", 
+        "num_samples": 300,
         "structure": "test_only"  # test のみ
     }
 }

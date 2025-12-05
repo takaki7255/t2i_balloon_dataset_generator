@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-12-03T17:49:07.097881",
+  "script_name": "create_onomatopoeia_panel_dataset_augmented.py",
+  "dataset_name": "syn1000-aug",
+  "base_output_path": "onomatopoeia_dataset",
+  "dataset_output_path": "onomatopoeia_dataset\\syn1000-aug",
+  "target_images": 1000,
+  "config": {
+    "SCALE_RANGE": [
+      0.005,
+      0.03
+    ],
+    "NUM_ONOMATOPOEIA_MEAN": 7.0,
+    "NUM_ONOMATOPOEIA_STD": 6.0,
+    "NUM_ONOMATOPOEIA_MIN": 1,
+    "NUM_ONOMATOPOEIA_MAX": 20,
+    "MAX_ATTEMPTS": 100,
+    "MAX_ONOMATOPOEIA_PER_PANEL": 2,
+    "TRAIN_RATIO": 0.8,
+    "ONOMATOPOEIA_SPLIT_SEED": 42,
+    "PANEL_AREA_RATIO_THRESHOLD": 0.85,
+    "PANEL_MIN_AREA": 10000,
+    "AUGMENTATION": {
+      "ENABLED": true,
+      "ROTATION": true,
+      "ROTATION_PROB": 0.7,
+      "SCALE": true,
+      "SCALE_PROB": 0.5,
+      "ASPECT_RATIO": true,
+      "ASPECT_PROB": 0.3,
+      "SHEAR": true,
+      "SHEAR_PROB": 0.4,
+      "ALPHA": true,
+      "ALPHA_PROB": 0.5,
+      "BLUR": true,
+      "BLUR_PROB": 0.3,
+      "RANDOM_ERASING": false,
+      "ERASING_PROB": 0.0
+    }
+  },
+  "input_directories": {
+    "onomatopoeia_dir": "onomatopeias",
+    "masks_dir": "onomatopeia_masks",
+    "pages_dir": "generated_double_backs_1536x1024"
+  },
+  "statistics": {
+    "total_images": 1000,
+    "train_images": 800,
+    "val_images": 200,
+    "train_onomatopoeia_used": 67,
+    "val_onomatopoeia_used": 17,
+    "total_pages_available": 83,
+    "total_onomatopoeia_pairs_available": 84,
+    "augmentation_enabled": true
+  }
+}
