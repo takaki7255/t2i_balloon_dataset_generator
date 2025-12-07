@@ -21,7 +21,7 @@ $ErrorActionPreference = "Continue"
 
 # 基本設定
 $DATASET_ROOT = ".\balloon_dataset"
-$TRAIN_DATASET = "real1000_dataset"
+$TRAIN_DATASET = "real200_dataset"
 $TEST_DATASET = "test300_dataset"
 $MODELS_DIR = ".\balloon_models"
 $RESULTS_DIR = ".\balloon_results"
@@ -47,7 +47,7 @@ Write-Host "==============================================" -ForegroundColor Cya
 Write-Host ""
 Write-Host "Training dataset: $TRAIN_DATASET" -ForegroundColor Green
 Write-Host "Test dataset: $TEST_DATASET" -ForegroundColor Magenta
-Write-Host "Models: ResNet34-UNet, DeepLabv3+, SegFormer" -ForegroundColor Yellow
+Write-Host "Models: ResNet34-UNet (scratch), ResNet34-UNet (pretrained), DeepLabv3+, SegFormer" -ForegroundColor Yellow
 Write-Host ""
 
 $trainDataPath = Join-Path $DATASET_ROOT $TRAIN_DATASET
@@ -73,11 +73,40 @@ if (-not $SkipTraining) {
     Write-Host "==============================================" -ForegroundColor Cyan
 
     # -----------------------------------------
-    # 1. ResNet34-UNet (Pretrained)
+    # 1. ResNet34-UNet (Scratch - No Pretrained)
     # -----------------------------------------
     Write-Host ""
     Write-Host "----------------------------------------------" -ForegroundColor White
-    Write-Host " [1/3] Training: ResNet34-UNet (Pretrained)" -ForegroundColor Magenta
+    Write-Host " [1/4] Training: ResNet34-UNet (Scratch)" -ForegroundColor Magenta
+    Write-Host "----------------------------------------------" -ForegroundColor White
+
+    $resnetScratchModelTag = "$TRAIN_DATASET-resnet34-scratch-unet-01"
+    
+    try {
+        python train_resnet_unet.py `
+            --root "$trainDataPath" `
+            --dataset "$TRAIN_DATASET" `
+            --backbone resnet34 `
+            --models-dir "$MODELS_DIR" `
+            --epochs $EPOCHS `
+            --batch $BATCH_SIZE `
+            --lr $LEARNING_RATE `
+            --patience $PATIENCE `
+            --wandb-proj "$WANDB_PROJECT" `
+            --run-name "$resnetScratchModelTag"
+        
+        Write-Host " Completed: ResNet34-UNet (Scratch)" -ForegroundColor Green
+    }
+    catch {
+        Write-Host " FAILED: ResNet34-UNet (Scratch) - $($_.Exception.Message)" -ForegroundColor Red
+    }
+
+    # -----------------------------------------
+    # 2. ResNet34-UNet (Pretrained)
+    # -----------------------------------------
+    Write-Host ""
+    Write-Host "----------------------------------------------" -ForegroundColor White
+    Write-Host " [2/4] Training: ResNet34-UNet (Pretrained)" -ForegroundColor Magenta
     Write-Host "----------------------------------------------" -ForegroundColor White
 
     $resnetModelTag = "$TRAIN_DATASET-resnet34-pretrained-unet-01"
@@ -103,11 +132,11 @@ if (-not $SkipTraining) {
     }
 
     # -----------------------------------------
-    # 2. DeepLabv3+ (ResNet50, Pretrained, stride=16)
+    # 3. DeepLabv3+ (ResNet50, Pretrained, stride=16)
     # -----------------------------------------
     Write-Host ""
     Write-Host "----------------------------------------------" -ForegroundColor White
-    Write-Host " [2/3] Training: DeepLabv3+ (ResNet50)" -ForegroundColor Magenta
+    Write-Host " [3/4] Training: DeepLabv3+ (ResNet50)" -ForegroundColor Magenta
     Write-Host "----------------------------------------------" -ForegroundColor White
 
     $deeplabModelTag = "$TRAIN_DATASET-deeplabv3plus-resnet50-pretrained-s16-01"
@@ -134,11 +163,11 @@ if (-not $SkipTraining) {
     }
 
     # -----------------------------------------
-    # 3. SegFormer (Boundary-Aware, Gray input)
+    # 4. SegFormer (Boundary-Aware, Gray input)
     # -----------------------------------------
     Write-Host ""
     Write-Host "----------------------------------------------" -ForegroundColor White
-    Write-Host " [3/3] Training: SegFormer (Boundary-Aware)" -ForegroundColor Magenta
+    Write-Host " [4/4] Training: SegFormer (Boundary-Aware)" -ForegroundColor Magenta
     Write-Host "----------------------------------------------" -ForegroundColor White
 
     $segformerModelTag = "$TRAIN_DATASET-segformer-gray-01"
@@ -181,11 +210,38 @@ if (-not $SkipTest) {
     Write-Host "==============================================" -ForegroundColor Cyan
 
     # -----------------------------------------
-    # 1. Test ResNet34-UNet
+    # 1. Test ResNet34-UNet (Scratch)
     # -----------------------------------------
     Write-Host ""
     Write-Host "----------------------------------------------" -ForegroundColor White
-    Write-Host " [1/3] Testing: ResNet34-UNet" -ForegroundColor Magenta
+    Write-Host " [1/4] Testing: ResNet34-UNet (Scratch)" -ForegroundColor Magenta
+    Write-Host "----------------------------------------------" -ForegroundColor White
+
+    $resnetScratchModelTag = "$TRAIN_DATASET-resnet34-scratch-unet-01"
+    
+    try {
+        python test_resnet_unet.py `
+            --model-tag "$resnetScratchModelTag" `
+            --backbone resnet34 `
+            --models-dir "$MODELS_DIR" `
+            --data-root "$testDataPath" `
+            --result-dir "$RESULTS_DIR" `
+            --batch $BATCH_SIZE `
+            --wandb-proj "$WANDB_PROJECT" `
+            --run-name "$resnetScratchModelTag-test-$TEST_DATASET"
+        
+        Write-Host " Completed: ResNet34-UNet (Scratch) test" -ForegroundColor Green
+    }
+    catch {
+        Write-Host " FAILED: ResNet34-UNet (Scratch) test - $($_.Exception.Message)" -ForegroundColor Red
+    }
+
+    # -----------------------------------------
+    # 2. Test ResNet34-UNet (Pretrained)
+    # -----------------------------------------
+    Write-Host ""
+    Write-Host "----------------------------------------------" -ForegroundColor White
+    Write-Host " [2/4] Testing: ResNet34-UNet (Pretrained)" -ForegroundColor Magenta
     Write-Host "----------------------------------------------" -ForegroundColor White
 
     $resnetModelTag = "$TRAIN_DATASET-resnet34-pretrained-unet-01"
@@ -208,11 +264,11 @@ if (-not $SkipTest) {
     }
 
     # -----------------------------------------
-    # 2. Test DeepLabv3+
+    # 3. Test DeepLabv3+
     # -----------------------------------------
     Write-Host ""
     Write-Host "----------------------------------------------" -ForegroundColor White
-    Write-Host " [2/3] Testing: DeepLabv3+" -ForegroundColor Magenta
+    Write-Host " [3/4] Testing: DeepLabv3+" -ForegroundColor Magenta
     Write-Host "----------------------------------------------" -ForegroundColor White
 
     $deeplabModelTag = "$TRAIN_DATASET-deeplabv3plus-resnet50-pretrained-s16-01"
@@ -236,11 +292,11 @@ if (-not $SkipTest) {
     }
 
     # -----------------------------------------
-    # 3. Test SegFormer
+    # 4. Test SegFormer
     # -----------------------------------------
     Write-Host ""
     Write-Host "----------------------------------------------" -ForegroundColor White
-    Write-Host " [3/3] Testing: SegFormer" -ForegroundColor Magenta
+    Write-Host " [4/4] Testing: SegFormer" -ForegroundColor Magenta
     Write-Host "----------------------------------------------" -ForegroundColor White
 
     $segformerModelTag = "$TRAIN_DATASET-segformer-gray-01"
@@ -288,9 +344,10 @@ Write-Host "Models trained on: $TRAIN_DATASET" -ForegroundColor White
 Write-Host "Models tested on: $TEST_DATASET" -ForegroundColor White
 Write-Host ""
 Write-Host "Models:" -ForegroundColor Cyan
-Write-Host "  1. ResNet34-UNet (Pretrained)" -ForegroundColor White
-Write-Host "  2. DeepLabv3+ (ResNet50, Pretrained, stride=16)" -ForegroundColor White
-Write-Host "  3. SegFormer (Boundary-Aware, Gray)" -ForegroundColor White
+Write-Host "  1. ResNet34-UNet (Scratch)" -ForegroundColor White
+Write-Host "  2. ResNet34-UNet (Pretrained)" -ForegroundColor White
+Write-Host "  3. DeepLabv3+ (ResNet50, Pretrained, stride=16)" -ForegroundColor White
+Write-Host "  4. SegFormer (Boundary-Aware, Gray)" -ForegroundColor White
 Write-Host ""
 Write-Host "Results saved in: $RESULTS_DIR" -ForegroundColor Yellow
 
