@@ -1,0 +1,35 @@
+{
+  "model_tag": "syn2000-balloon-corner-unet-01",
+  "data_root": "balloon_dataset\\test100_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-06T12:08:01.043420",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8071445265821089,
+      "iou": 0.7087020681160235,
+      "precision": 0.7930453987820585,
+      "recall": 0.8603702386953346,
+      "f1_score": 0.8071444788049023
+    },
+    "global_metrics": {
+      "dice": 0.8576778507266007,
+      "iou": 0.750819592592288,
+      "precision": 0.8377772280690884,
+      "recall": 0.8785469196742269,
+      "f1_score": 0.857677800754798,
+      "accuracy": 0.9660416158040315
+    }
+  },
+  "statistics": {
+    "total_images": 100,
+    "dice_std": 0.18793463779361688,
+    "iou_std": 0.20716412763488,
+    "precision_std": 0.19691942083929434,
+    "recall_std": 0.18957852605679776,
+    "f1_std": 0.1879346321043515
+  }
+}

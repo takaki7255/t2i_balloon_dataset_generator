@@ -1,0 +1,35 @@
+{
+  "model_tag": "syn200_dataset-unet-01",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-06T21:03:19.224661",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8076337760872981,
+      "iou": 0.6934655506021024,
+      "precision": 0.8054401081968425,
+      "recall": 0.836469472953476,
+      "f1_score": 0.8076337271341364
+    },
+    "global_metrics": {
+      "dice": 0.8274150779546879,
+      "iou": 0.7056333937088731,
+      "precision": 0.8234996302559017,
+      "recall": 0.8313679366504245,
+      "f1_score": 0.8274150279558153,
+      "accuracy": 0.9588151211208752
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.12854629797573547,
+    "iou_std": 0.15226111918490035,
+    "precision_std": 0.1484623778302167,
+    "recall_std": 0.1383646051099134,
+    "f1_std": 0.12854629562434014
+  }
+}

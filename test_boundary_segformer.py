@@ -12,8 +12,10 @@ Usage:
 """
 
 import os
+import json
 import argparse
 from pathlib import Path
+from datetime import datetime
 
 import torch
 import torch.nn.functional as F
@@ -46,8 +48,8 @@ def visualize_result(image, mask_true, mask_pred, save_path):
     else:
         image_rgb = image.copy()
     
-    # マスクをカラーマップに変換
-    mask_true_colored = cv2.applyColorMap((mask_true * 255).astype(np.uint8), cv2.COLORMAP_GREEN)
+    # マスクをカラーマップに変換 (COLORMAP_SUMMER は緑系)
+    mask_true_colored = cv2.applyColorMap((mask_true * 255).astype(np.uint8), cv2.COLORMAP_SUMMER)
     mask_pred_colored = cv2.applyColorMap((mask_pred * 255).astype(np.uint8), cv2.COLORMAP_JET)
     
     # オーバーレイ
@@ -92,14 +94,18 @@ def visualize_result(image, mask_true, mask_pred, save_path):
 
 def test_model(model, dataloader, device, output_dir, save_vis=True):
     """
-    モデルをテスト
+    モデルをテスト（test_unet.pyと同様のメトリクス出力）
     """
     model.eval()
     
+    all_dices = []
     all_ious = []
     all_precisions = []
     all_recalls = []
     all_f1s = []
+    
+    # Global metrics用
+    total_tp, total_fp, total_fn, total_tn = 0, 0, 0, 0
     
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -126,25 +132,30 @@ def test_model(model, dataloader, device, output_dir, save_vis=True):
                 # 2値化
                 pred_binary = (pred > 0.5).astype(np.float32)
                 
-                # メトリクス計算
-                iou = calculate_iou(
-                    torch.from_numpy(pred).unsqueeze(0),
-                    torch.from_numpy(mask).unsqueeze(0)
-                )
+                # TP, FP, FN, TN
+                tp = ((pred_binary == 1) & (mask > 0.5)).sum()
+                fp = ((pred_binary == 1) & (mask <= 0.5)).sum()
+                fn = ((pred_binary == 0) & (mask > 0.5)).sum()
+                tn = ((pred_binary == 0) & (mask <= 0.5)).sum()
                 
-                # Precision, Recall, F1
-                tp = ((pred_binary == 1) & (mask == 1)).sum()
-                fp = ((pred_binary == 1) & (mask == 0)).sum()
-                fn = ((pred_binary == 0) & (mask == 1)).sum()
+                # Global用に累積
+                total_tp += tp
+                total_fp += fp
+                total_fn += fn
+                total_tn += tn
                 
+                # Per-image metrics
                 precision = tp / (tp + fp + 1e-6)
                 recall = tp / (tp + fn + 1e-6)
                 f1 = 2 * (precision * recall) / (precision + recall + 1e-6)
+                iou = tp / (tp + fp + fn + 1e-6)
+                dice = 2 * tp / (2 * tp + fp + fn + 1e-6)
                 
-                all_ious.append(iou)
-                all_precisions.append(precision)
-                all_recalls.append(recall)
-                all_f1s.append(f1)
+                all_dices.append(float(dice))
+                all_ious.append(float(iou))
+                all_precisions.append(float(precision))
+                all_recalls.append(float(recall))
+                all_f1s.append(float(f1))
                 
                 # 可視化
                 if save_vis:
@@ -159,16 +170,38 @@ def test_model(model, dataloader, device, output_dir, save_vis=True):
                     save_path = vis_dir / f"{Path(filename).stem}_result.png"
                     visualize_result(img, mask, pred_binary, save_path)
     
-    # 統計
+    # Global metrics計算
+    global_precision = total_tp / (total_tp + total_fp + 1e-6)
+    global_recall = total_tp / (total_tp + total_fn + 1e-6)
+    global_f1 = 2 * (global_precision * global_recall) / (global_precision + global_recall + 1e-6)
+    global_iou = total_tp / (total_tp + total_fp + total_fn + 1e-6)
+    global_dice = 2 * total_tp / (2 * total_tp + total_fp + total_fn + 1e-6)
+    global_accuracy = (total_tp + total_tn) / (total_tp + total_fp + total_fn + total_tn + 1e-6)
+    
+    # 結果をまとめる（test_unet.pyと同形式）
     metrics = {
-        'mean_iou': np.mean(all_ious),
-        'std_iou': np.std(all_ious),
-        'mean_precision': np.mean(all_precisions),
-        'mean_recall': np.mean(all_recalls),
-        'mean_f1': np.mean(all_f1s),
+        # Average metrics
+        'avg_dice': float(np.mean(all_dices)),
+        'avg_iou': float(np.mean(all_ious)),
+        'avg_precision': float(np.mean(all_precisions)),
+        'avg_recall': float(np.mean(all_recalls)),
+        'avg_f1': float(np.mean(all_f1s)),
+        # Global metrics
+        'global_dice': float(global_dice),
+        'global_iou': float(global_iou),
+        'global_precision': float(global_precision),
+        'global_recall': float(global_recall),
+        'global_f1': float(global_f1),
+        'accuracy': float(global_accuracy),
+        # Individual metrics for std
+        'individual_dice': all_dices,
+        'individual_iou': all_ious,
+        'individual_precision': all_precisions,
+        'individual_recall': all_recalls,
+        'individual_f1': all_f1s
     }
     
-    return metrics, all_ious
+    return metrics
 
 
 def main(args):
@@ -232,44 +265,109 @@ def main(args):
     
     # テスト実行
     print(f"\n=== Testing ===")
-    metrics, all_ious = test_model(
+    metrics = test_model(
         model, test_loader, device, 
         args.output_dir, 
         save_vis=args.save_vis
     )
     
-    # 結果表示
+    # 結果表示（test_unet.pyと同形式）
     print(f"\n{'='*60}")
     print(f"Test Results")
     print(f"{'='*60}")
-    print(f"Mean IoU:       {metrics['mean_iou']:.4f} ± {metrics['std_iou']:.4f}")
-    print(f"Mean Precision: {metrics['mean_precision']:.4f}")
-    print(f"Mean Recall:    {metrics['mean_recall']:.4f}")
-    print(f"Mean F1:        {metrics['mean_f1']:.4f}")
+    print(f"Average Metrics (per image):")
+    print(f"  Dice Score: {metrics['avg_dice']:.4f} ± {np.std(metrics['individual_dice']):.4f}")
+    print(f"  IoU:        {metrics['avg_iou']:.4f} ± {np.std(metrics['individual_iou']):.4f}")
+    print(f"  Precision:  {metrics['avg_precision']:.4f} ± {np.std(metrics['individual_precision']):.4f}")
+    print(f"  Recall:     {metrics['avg_recall']:.4f} ± {np.std(metrics['individual_recall']):.4f}")
+    print(f"  F1 Score:   {metrics['avg_f1']:.4f} ± {np.std(metrics['individual_f1']):.4f}")
+    print(f"\nGlobal Metrics (all pixels):")
+    print(f"  Dice Score: {metrics['global_dice']:.4f}")
+    print(f"  IoU:        {metrics['global_iou']:.4f}")
+    print(f"  Precision:  {metrics['global_precision']:.4f}")
+    print(f"  Recall:     {metrics['global_recall']:.4f}")
+    print(f"  F1 Score:   {metrics['global_f1']:.4f}")
+    print(f"  Accuracy:   {metrics['accuracy']:.4f}")
     print(f"{'='*60}")
     
-    # 結果保存
+    # モデルタグを生成
+    checkpoint_path = Path(args.checkpoint)
+    model_tag = checkpoint_path.parent.name
+    
+    # 結果保存（JSON形式 - test_unet.pyと同形式）
     output_dir = Path(args.output_dir)
-    with open(output_dir / 'test_results.txt', 'w') as f:
+    results_json = {
+        "model_tag": model_tag,
+        "data_root": str(args.test_images),
+        "img_size": [height, width],
+        "batch_size": args.batch_size,
+        "evaluation_time": datetime.now().isoformat(),
+        "metrics": {
+            "average_metrics": {
+                "dice": metrics["avg_dice"],
+                "iou": metrics["avg_iou"],
+                "precision": metrics["avg_precision"],
+                "recall": metrics["avg_recall"],
+                "f1_score": metrics["avg_f1"]
+            },
+            "global_metrics": {
+                "dice": metrics["global_dice"],
+                "iou": metrics["global_iou"],
+                "precision": metrics["global_precision"],
+                "recall": metrics["global_recall"],
+                "f1_score": metrics["global_f1"],
+                "accuracy": metrics["accuracy"]
+            }
+        },
+        "statistics": {
+            "total_images": len(metrics["individual_dice"]),
+            "dice_std": float(np.std(metrics["individual_dice"])),
+            "iou_std": float(np.std(metrics["individual_iou"])),
+            "precision_std": float(np.std(metrics["individual_precision"])),
+            "recall_std": float(np.std(metrics["individual_recall"])),
+            "f1_std": float(np.std(metrics["individual_f1"]))
+        }
+    }
+    
+    json_path = output_dir / "evaluation_results.json"
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(results_json, f, indent=2, ensure_ascii=False)
+    
+    # テキスト形式でも保存
+    txt_path = output_dir / "evaluation_summary.txt"
+    with open(txt_path, 'w', encoding='utf-8') as f:
+        f.write(f"Model Evaluation Results\n")
+        f.write(f"={'='*50}\n\n")
+        f.write(f"Model: {model_tag}\n")
         f.write(f"Checkpoint: {args.checkpoint}\n")
         f.write(f"Backbone: {backbone}\n")
         f.write(f"Input type: {input_type}\n")
-        f.write(f"Input size: {height}x{width}\n")
-        f.write(f"Test images: {args.test_images}\n")
-        f.write(f"\n")
-        f.write(f"Mean IoU:       {metrics['mean_iou']:.4f} ± {metrics['std_iou']:.4f}\n")
-        f.write(f"Mean Precision: {metrics['mean_precision']:.4f}\n")
-        f.write(f"Mean Recall:    {metrics['mean_recall']:.4f}\n")
-        f.write(f"Mean F1:        {metrics['mean_f1']:.4f}\n")
-        f.write(f"\n")
-        f.write(f"Per-image IoU:\n")
-        for i, iou in enumerate(all_ious):
-            f.write(f"  {i+1}: {iou:.4f}\n")
+        f.write(f"Dataset: {args.test_images}\n")
+        f.write(f"Image Size: {height}x{width}\n")
+        f.write(f"Total Images: {len(metrics['individual_dice'])}\n")
+        f.write(f"Evaluation Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+        
+        f.write(f"Average Metrics (per image):\n")
+        f.write(f"  Dice Score: {metrics['avg_dice']:.4f} ± {np.std(metrics['individual_dice']):.4f}\n")
+        f.write(f"  IoU:        {metrics['avg_iou']:.4f} ± {np.std(metrics['individual_iou']):.4f}\n")
+        f.write(f"  Precision:  {metrics['avg_precision']:.4f} ± {np.std(metrics['individual_precision']):.4f}\n")
+        f.write(f"  Recall:     {metrics['avg_recall']:.4f} ± {np.std(metrics['individual_recall']):.4f}\n")
+        f.write(f"  F1 Score:   {metrics['avg_f1']:.4f} ± {np.std(metrics['individual_f1']):.4f}\n\n")
+        
+        f.write(f"Global Metrics (all pixels):\n")
+        f.write(f"  Dice Score: {metrics['global_dice']:.4f}\n")
+        f.write(f"  IoU:        {metrics['global_iou']:.4f}\n")
+        f.write(f"  Precision:  {metrics['global_precision']:.4f}\n")
+        f.write(f"  Recall:     {metrics['global_recall']:.4f}\n")
+        f.write(f"  F1 Score:   {metrics['global_f1']:.4f}\n")
+        f.write(f"  Accuracy:   {metrics['accuracy']:.4f}\n")
     
-    print(f"\nResults saved to {output_dir / 'test_results.txt'}")
+    print(f"\n評価結果保存完了:")
+    print(f"  JSON: {json_path}")
+    print(f"  テキスト: {txt_path}")
     
     if args.save_vis:
-        print(f"Visualizations saved to {output_dir / 'visualizations'}")
+        print(f"  Visualizations: {output_dir / 'visualizations'}")
 
 
 if __name__ == "__main__":

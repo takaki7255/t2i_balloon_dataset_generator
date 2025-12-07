@@ -26,16 +26,12 @@ $RESULTS_DIR = ".\balloon_results"
 $WANDB_PROJECT = "balloon-seg"
 
 # テストデータセット (評価用)
-$TEST_DATASETS = @("test100_dataset")
+$TEST_DATASETS = @("test300_dataset")
 
 # 学習対象データセット
 $TRAIN_DATASETS = @(
-    "syn200-corner",
-    "syn500-corner",
-    "syn750-corner",
-    "syn1000-corner",
-    "syn2000-corner",
-    "syn5000-corner"
+    "real1000_dataset",
+    "real3000_dataset"
 )
 
 # モデル保存ディレクトリを作成

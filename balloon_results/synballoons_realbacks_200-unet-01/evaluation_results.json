@@ -1,0 +1,35 @@
+{
+  "model_tag": "synballoons_realbacks_200-unet-01",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-06T21:08:54.570136",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.5246213393838228,
+      "iou": 0.380301190264776,
+      "precision": 0.8762750530025346,
+      "recall": 0.40513785235209987,
+      "f1_score": 0.5246213002146658
+    },
+    "global_metrics": {
+      "dice": 0.544377385984275,
+      "iou": 0.3739825011940864,
+      "precision": 0.8914918325945536,
+      "recall": 0.39181780490060814,
+      "f1_score": 0.5443773435644726,
+      "accuracy": 0.9221148851182711
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.2010372177959551,
+    "iou_std": 0.18380749440642388,
+    "precision_std": 0.16475960879047646,
+    "recall_std": 0.20063448890360652,
+    "f1_std": 0.2010372082264029
+  }
+}

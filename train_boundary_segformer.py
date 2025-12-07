@@ -278,9 +278,9 @@ def main(args):
     # オプティマイザ
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     
-    # スケジューラ
+    # スケジューラ (PyTorch 2.2+ では verbose パラメータは非推奨)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5, verbose=True
+        optimizer, mode='min', factor=0.5, patience=5
     )
     
     # 出力ディレクトリ

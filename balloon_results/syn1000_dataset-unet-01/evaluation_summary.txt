@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn1000_dataset-unet-01
+Dataset: balloon_dataset\test300_dataset
+Image Size: (384, 512)
+Total Images: 300
+Evaluation Time: 2025-12-06 20:55:52
+
+Average Metrics (per image):
+  Dice Score: 0.8326 ± 0.1390
+  IoU:        0.7322 ± 0.1627
+  Precision:  0.8391 ± 0.1502
+  Recall:     0.8515 ± 0.1529
+  F1 Score:   0.8326 ± 0.1390
+
+Global Metrics (all pixels):
+  Dice Score: 0.8541
+  IoU:        0.7454
+  Precision:  0.8558
+  Recall:     0.8524
+  F1 Score:   0.8541
+  Accuracy:   0.9654
