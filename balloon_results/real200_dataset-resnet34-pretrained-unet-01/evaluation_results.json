@@ -1,0 +1,36 @@
+{
+  "model_tag": "real200_dataset-resnet34-pretrained-unet-01",
+  "backbone": "resnet34",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-07T18:40:16.802870",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.9197017898036891,
+      "iou": 0.86662673649955,
+      "precision": 0.9291851435852401,
+      "recall": 0.9198472672715864,
+      "f1_score": 0.9197017406263946
+    },
+    "global_metrics": {
+      "dice": 0.9366117664822846,
+      "iou": 0.8807806377393786,
+      "precision": 0.9416198153150899,
+      "recall": 0.9316567069054592,
+      "f1_score": 0.9366117164836949,
+      "accuracy": 0.9850248887803803
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.11990754041420207,
+    "iou_std": 0.1417071072350872,
+    "precision_std": 0.12146270666887377,
+    "recall_std": 0.1312706934503445,
+    "f1_std": 0.1199075358606442
+  }
+}

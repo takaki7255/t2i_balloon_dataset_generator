@@ -1,0 +1,35 @@
+{
+  "model_tag": "real200_dataset-segformer-gray-01",
+  "data_root": ".\\balloon_dataset\\test300_dataset\\images",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 4,
+  "evaluation_time": "2025-12-07T18:41:30.128140",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.904479386445818,
+      "iou": 0.8424640510925452,
+      "precision": 0.9209441331788664,
+      "recall": 0.8998463519736721,
+      "f1_score": 0.9044788955847283
+    },
+    "global_metrics": {
+      "dice": 0.9237990236546862,
+      "iou": 0.8583889477519603,
+      "precision": 0.9344226428055954,
+      "recall": 0.9134142526709944,
+      "f1_score": 0.9237985237195192,
+      "accuracy": 0.9821054585774573
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.12721060748113608,
+    "iou_std": 0.14898227732559285,
+    "precision_std": 0.12497585401066624,
+    "recall_std": 0.1410120083487638,
+    "f1_std": 0.12721056195523892
+  }
+}

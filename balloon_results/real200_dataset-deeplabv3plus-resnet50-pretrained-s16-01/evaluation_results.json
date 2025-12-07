@@ -1,0 +1,37 @@
+{
+  "model_tag": "real200_dataset-deeplabv3plus-resnet50-pretrained-s16-01",
+  "backbone": "resnet50",
+  "output_stride": 16,
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-07T18:41:09.295032",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.9126125775727951,
+      "iou": 0.8525120120647691,
+      "precision": 0.931516828715515,
+      "recall": 0.9040551736817739,
+      "f1_score": 0.9126125282796761
+    },
+    "global_metrics": {
+      "dice": 0.9274407202671697,
+      "iou": 0.8646987982782557,
+      "precision": 0.9430305522027956,
+      "recall": 0.9123579563300891,
+      "f1_score": 0.9274406702808304,
+      "accuracy": 0.9830473666720904
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.11093277739046446,
+    "iou_std": 0.13337726786910964,
+    "precision_std": 0.10252309903844989,
+    "recall_std": 0.12751092598324834,
+    "f1_std": 0.1109327735310877
+  }
+}
