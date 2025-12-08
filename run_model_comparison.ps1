@@ -87,6 +87,7 @@ if (-not $SkipTraining) {
             --root "$trainDataPath" `
             --dataset "$TRAIN_DATASET" `
             --backbone resnet34 `
+            --no-pretrained `
             --models-dir "$MODELS_DIR" `
             --epochs $EPOCHS `
             --batch $BATCH_SIZE `

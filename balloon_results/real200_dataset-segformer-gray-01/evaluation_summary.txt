@@ -8,19 +8,19 @@ Input type: gray
 Dataset: .\balloon_dataset\test300_dataset\images
 Image Size: 384x512
 Total Images: 300
-Evaluation Time: 2025-12-07 18:41:30
+Evaluation Time: 2025-12-07 19:49:06
 
 Average Metrics (per image):
-  Dice Score: 0.9045 ± 0.1272
-  IoU:        0.8425 ± 0.1490
-  Precision:  0.9209 ± 0.1250
-  Recall:     0.8998 ± 0.1410
-  F1 Score:   0.9045 ± 0.1272
+  Dice Score: 0.9004 ± 0.1239
+  IoU:        0.8353 ± 0.1500
+  Precision:  0.9146 ± 0.1200
+  Recall:     0.9022 ± 0.1360
+  F1 Score:   0.9004 ± 0.1239
 
 Global Metrics (all pixels):
-  Dice Score: 0.9238
-  IoU:        0.8584
-  Precision:  0.9344
-  Recall:     0.9134
-  F1 Score:   0.9238
-  Accuracy:   0.9821
+  Dice Score: 0.9200
+  IoU:        0.8519
+  Precision:  0.9260
+  Recall:     0.9141
+  F1 Score:   0.9200
+  Accuracy:   0.9811

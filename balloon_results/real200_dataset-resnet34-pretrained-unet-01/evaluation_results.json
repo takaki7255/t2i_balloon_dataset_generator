@@ -7,7 +7,7 @@
     512
   ],
   "batch_size": 8,
-  "evaluation_time": "2025-12-07T18:40:16.802870",
+  "evaluation_time": "2025-12-07T19:47:54.581087",
   "metrics": {
     "average_metrics": {
       "dice": 0.9197017898036891,

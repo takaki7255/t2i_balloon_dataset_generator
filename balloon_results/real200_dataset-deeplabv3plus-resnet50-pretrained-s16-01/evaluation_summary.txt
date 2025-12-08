@@ -7,7 +7,7 @@ Output Stride: 16
 Dataset: balloon_dataset\test300_dataset
 Image Size: (384, 512)
 Total Images: 300
-Evaluation Time: 2025-12-07 18:41:09
+Evaluation Time: 2025-12-07 19:48:45
 
 Average Metrics (per image):
   Dice Score: 0.9126 ± 0.1109
