@@ -5,7 +5,7 @@ Boundary-Aware SegFormer 学習スクリプト
 BCE + Dice + Boundary Aware Lossを使用。
 
 Usage:
-    # グレースケール入力で学習
+    # グレースケール入力で学習（内部で3chに複製される）
     python train_boundary_segformer.py --input_type gray
     
     # LSD+SDF+Gray入力で学習

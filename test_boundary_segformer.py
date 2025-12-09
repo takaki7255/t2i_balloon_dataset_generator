@@ -235,10 +235,10 @@ def main(args):
     if 'val_iou' in checkpoint:
         print(f"Validation IoU: {checkpoint['val_iou']:.4f}")
     
-    # モデル構築
-    in_channels = 1 if input_type == 'gray' else 3
+    # モデル構築（入力チャンネルは常に3）
+    # グレースケール入力は prepare_input_gray で3chに複製される
     model = BoundaryAwareSegFormer(
-        in_channels=in_channels,
+        in_channels=3,
         num_classes=1,
         backbone=backbone,
         pretrained=False  # テスト時は事前学習モデル不要

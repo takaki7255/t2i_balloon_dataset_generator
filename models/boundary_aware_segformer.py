@@ -39,10 +39,10 @@ class BoundaryAwareSegFormer(nn.Module):
     Hugging Face transformersライブラリのSegFormerをベースに、
     カスタム入力チャンネル数と損失関数を使用。
     """
-    def __init__(self, in_channels=1, num_classes=1, backbone='nvidia/mit-b1', pretrained=True):
+    def __init__(self, in_channels=3, num_classes=1, backbone='nvidia/mit-b1', pretrained=True):
         """
         Args:
-            in_channels: 入力チャンネル数 (1 or 3)
+            in_channels: 入力チャンネル数 (常に3を使用。gray入力の場合はprepare_input_grayで3chに複製)
             num_classes: 出力クラス数 (バイナリセグメンテーションなら1)
             backbone: SegFormerバックボーン ('nvidia/mit-b1', 'nvidia/mit-b0', etc.)
             pretrained: ImageNet事前学習モデルを使用するか
@@ -64,40 +64,7 @@ class BoundaryAwareSegFormer(nn.Module):
             config.num_labels = num_classes
             self.segformer = SegformerForSemanticSegmentation(config)
         
-        # 入力チャンネル数が3でない場合、最初の畳み込み層を調整
-        if in_channels != 3:
-            self._adjust_input_channels(in_channels)
-    
-    def _adjust_input_channels(self, in_channels):
-        """
-        入力チャンネル数を調整
-        """
-        # SegFormerの最初のpatch embeddingを取得
-        original_patch_embed = self.segformer.segformer.encoder.patch_embeddings[0].proj
-        
-        # 新しい畳み込み層を作成
-        new_patch_embed = nn.Conv2d(
-            in_channels,
-            original_patch_embed.out_channels,
-            kernel_size=original_patch_embed.kernel_size,
-            stride=original_patch_embed.stride,
-            padding=original_patch_embed.padding
-        )
-        
-        # 重みを初期化（グレースケールの場合、RGBの平均を使用）
-        with torch.no_grad():
-            if in_channels == 1:
-                # RGB 3チャンネルの平均を使用
-                new_patch_embed.weight[:, 0:1, :, :] = original_patch_embed.weight.mean(dim=1, keepdim=True)
-            else:
-                # その他のチャンネル数の場合はランダム初期化
-                nn.init.kaiming_normal_(new_patch_embed.weight)
-            
-            if new_patch_embed.bias is not None:
-                new_patch_embed.bias.copy_(original_patch_embed.bias)
-        
-        # 置き換え
-        self.segformer.segformer.encoder.patch_embeddings[0].proj = new_patch_embed
+        # Note: in_channelsは常に3を想定。gray入力はprepare_input_grayで3chに複製される
     
     def forward(self, x):
         """
@@ -258,12 +225,13 @@ def compute_sdf(mask):
 def prepare_input_gray(image):
     """
     グレースケール1チャンネル入力を準備
+    グレースケール値を3チャンネルに複製してSegFormerの入力形式に合わせる
     
     Args:
         image: numpy array (H, W, 3) or (H, W)
     
     Returns:
-        torch.Tensor (1, H, W)
+        torch.Tensor (3, H, W)
     """
     if len(image.shape) == 3:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -273,7 +241,10 @@ def prepare_input_gray(image):
     # 正規化 [0, 1]
     gray = gray.astype(np.float32) / 255.0
     
-    return torch.from_numpy(gray).unsqueeze(0)
+    # 3チャンネルに複製
+    gray_3ch = np.stack([gray, gray, gray], axis=0)
+    
+    return torch.from_numpy(gray_3ch).float()
 
 
 def prepare_input_lsd_sdf(image, mask=None):
