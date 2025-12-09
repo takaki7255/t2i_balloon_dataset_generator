@@ -1,0 +1,25 @@
+DeepLabv3+ Model Evaluation Results
+==================================================
+
+Model: real5000_dataset-deeplabv3plus-resnet50-pretrained-s16-01
+Backbone: resnet50
+Output Stride: 16
+Dataset: balloon_dataset\test300_dataset
+Image Size: (384, 512)
+Total Images: 300
+Evaluation Time: 2025-12-09 06:36:01
+
+Average Metrics (per image):
+  Dice Score: 0.9758 ± 0.0367
+  IoU:        0.9549 ± 0.0617
+  Precision:  0.9810 ± 0.0344
+  Recall:     0.9726 ± 0.0508
+  F1 Score:   0.9758 ± 0.0367
+
+Global Metrics (all pixels):
+  Dice Score: 0.9770
+  IoU:        0.9551
+  Precision:  0.9821
+  Recall:     0.9720
+  F1 Score:   0.9770
+  Accuracy:   0.9946

@@ -1,0 +1,24 @@
+ResNet-UNet Model Evaluation Results
+==================================================
+
+Model: real5000_dataset-resnet34-pretrained-unet-01
+Backbone: resnet34
+Dataset: balloon_dataset\test300_dataset
+Image Size: (384, 512)
+Total Images: 300
+Evaluation Time: 2025-12-09 06:35:09
+
+Average Metrics (per image):
+  Dice Score: 0.9714 ± 0.0648
+  IoU:        0.9494 ± 0.0819
+  Precision:  0.9801 ± 0.0368
+  Recall:     0.9679 ± 0.0748
+  F1 Score:   0.9714 ± 0.0648
+
+Global Metrics (all pixels):
+  Dice Score: 0.9753
+  IoU:        0.9517
+  Precision:  0.9812
+  Recall:     0.9694
+  F1 Score:   0.9753
+  Accuracy:   0.9942

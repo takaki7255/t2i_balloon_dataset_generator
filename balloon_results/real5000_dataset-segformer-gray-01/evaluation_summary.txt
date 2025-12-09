@@ -1,0 +1,26 @@
+Model Evaluation Results
+===================================================
+
+Model: real5000_dataset-segformer-gray-01
+Checkpoint: .\balloon_models\real5000_dataset-segformer-gray-01\best_segformer_gray.pth
+Backbone: nvidia/mit-b1
+Input type: gray
+Dataset: .\balloon_dataset\test300_dataset\images
+Image Size: 384x512
+Total Images: 300
+Evaluation Time: 2025-12-09 06:36:22
+
+Average Metrics (per image):
+  Dice Score: 0.9702 ± 0.0420
+  IoU:        0.9448 ± 0.0673
+  Precision:  0.9790 ± 0.0303
+  Recall:     0.9637 ± 0.0599
+  F1 Score:   0.9702 ± 0.0420
+
+Global Metrics (all pixels):
+  Dice Score: 0.9734
+  IoU:        0.9481
+  Precision:  0.9799
+  Recall:     0.9669
+  F1 Score:   0.9734
+  Accuracy:   0.9937

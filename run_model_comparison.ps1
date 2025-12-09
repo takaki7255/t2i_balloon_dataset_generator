@@ -21,7 +21,7 @@ $ErrorActionPreference = "Continue"
 
 # 基本設定
 $DATASET_ROOT = ".\balloon_dataset"
-$TRAIN_DATASET = "real200_dataset"
+$TRAIN_DATASET = "real5000_dataset"
 $TEST_DATASET = "test300_dataset"
 $MODELS_DIR = ".\balloon_models"
 $RESULTS_DIR = ".\balloon_results"

@@ -17,8 +17,8 @@ target_category = "balloon"                                   # 処理対象カ�
 # データセット設定（target_categoryベースで出力先を決定）
 datasets = {
     "real_dataset": {
-        "output_root": f"./{target_category}_dataset/real3000_dataset",
-        "num_samples": 3000,
+        "output_root": f"./{target_category}_dataset/real5000_dataset",
+        "num_samples": 5000,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {
