@@ -37,7 +37,7 @@ CFG = {
     # 事前学習済み ckpt
     "RESUME":      "",
 
-    "MODELS_DIR":  Path("onomatopoeia_models"),
+    "MODELS_DIR":  Path("balloon_models"),
 
     # 予測可視化
     "SAVE_PRED_EVERY": 5,

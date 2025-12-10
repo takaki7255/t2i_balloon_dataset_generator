@@ -1,0 +1,35 @@
+{
+  "model_tag": "syn1000-corner-unet-02-real100_dataset-finetuned",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-10T19:58:59.866494",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.9030712982889229,
+      "iou": 0.8447016977734798,
+      "precision": 0.9255576840386641,
+      "recall": 0.8969967309614193,
+      "f1_score": 0.9030712494362602
+    },
+    "global_metrics": {
+      "dice": 0.9239920286042792,
+      "iou": 0.8587222893950709,
+      "precision": 0.9404294465193621,
+      "recall": 0.9081193469503241,
+      "f1_score": 0.9239919786195504,
+      "accuracy": 0.9822581481933578
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.1435322989983576,
+    "iou_std": 0.1680466552085768,
+    "precision_std": 0.13667419910592046,
+    "recall_std": 0.15799058936191884,
+    "f1_std": 0.14353229404107115
+  }
+}

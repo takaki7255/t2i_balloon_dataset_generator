@@ -1,0 +1,23 @@
+Model Evaluation Results
+==================================================
+
+Model: syn750-corner-unet-03-real200_dataset-finetuned
+Dataset: balloon_dataset\test300_dataset
+Image Size: (384, 512)
+Total Images: 300
+Evaluation Time: 2025-12-10 20:15:35
+
+Average Metrics (per image):
+  Dice Score: 0.9148 ± 0.1243
+  IoU:        0.8602 ± 0.1541
+  Precision:  0.9304 ± 0.1169
+  Recall:     0.9175 ± 0.1321
+  F1 Score:   0.9148 ± 0.1243
+
+Global Metrics (all pixels):
+  Dice Score: 0.9313
+  IoU:        0.8714
+  Precision:  0.9399
+  Recall:     0.9228
+  F1 Score:   0.9313
+  Accuracy:   0.9838

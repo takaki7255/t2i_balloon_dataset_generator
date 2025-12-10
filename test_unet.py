@@ -425,7 +425,12 @@ def main():
     # CFGを上書き
     cfg = CFG.copy()
     
-    if args.model_tag:
+    # --model-path が指定された場合、ファイル名からMODEL_TAGを自動設定
+    if args.model_path:
+        model_stem = Path(args.model_path).stem  # 拡張子なしのファイル名
+        cfg["MODEL_TAG"] = model_stem
+        print(f"🏷️  Model tag (from path): {cfg['MODEL_TAG']}")
+    elif args.model_tag:
         cfg["MODEL_TAG"] = args.model_tag
         print(f"🏷️  Model tag: {cfg['MODEL_TAG']}")
     
