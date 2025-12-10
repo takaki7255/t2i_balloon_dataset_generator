@@ -487,8 +487,7 @@ def main():
     # パス設定
     balloons_dir = "balloons/images/"
     masks_dir = "balloons/masks/"
-    # backgrounds_dir = "generated_double_backs_1536x1024"
-    backgrounds_dir = "backs_real"
+    backgrounds_dir = "generated_double_backs_1536x1024"
     temp_output_dir = "temp_syn_results"
     temp_mask_output_dir = "temp_syn_results_mask"
     final_output_dir = "balloon_dataset/synballoons_realbacks_200"
