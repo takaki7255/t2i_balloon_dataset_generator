@@ -1,0 +1,35 @@
+{
+  "model_tag": "syn1000-b75-unet-01",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2025-12-17T13:10:03.183169",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8437755916004843,
+      "iou": 0.7475813294271328,
+      "precision": 0.8275728517981868,
+      "recall": 0.8863372573281901,
+      "f1_score": 0.8437755428692141
+    },
+    "global_metrics": {
+      "dice": 0.8653982378629218,
+      "iou": 0.7627330282238428,
+      "precision": 0.843152306400487,
+      "recall": 0.8888498645952064,
+      "f1_score": 0.8653981878977252,
+      "accuracy": 0.967165662977429
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.13463380319500642,
+    "iou_std": 0.1569807566725517,
+    "precision_std": 0.1438197966849646,
+    "recall_std": 0.13731504552357576,
+    "f1_std": 0.1346337987814328
+  }
+}

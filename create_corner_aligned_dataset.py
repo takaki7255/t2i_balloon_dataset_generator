@@ -885,8 +885,8 @@ def generate_dataset_split(background_files: list, balloon_pairs: list,
 def main():
     """メイン処理"""
     parser = argparse.ArgumentParser(description="コマの角に合わせた吹き出し合成データセット作成")
-    parser.add_argument("--balloon-dir", required=False, default="balloons", help="吹き出し画像ディレクトリ")
-    parser.add_argument("--mask-dir", required=False, default="balloon_masks", help="マスク画像ディレクトリ")
+    parser.add_argument("--balloon-dir", required=False, default="balloons/images", help="吹き出し画像ディレクトリ")
+    parser.add_argument("--mask-dir", required=False, default="balloons/masks", help="マスク画像ディレクトリ")
     parser.add_argument("--background-dir", required=False, default="generated_double_backs_1536x1024", help="背景画像ディレクトリ")
     parser.add_argument("--output-dir", required=False, default="temp_corner_output", help="中間出力画像ディレクトリ（一時的）")
     parser.add_argument("--mask-output-dir", required=False, default="temp_corner_masks", help="中間出力マスクディレクトリ（一時的）")
