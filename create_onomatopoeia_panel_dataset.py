@@ -451,8 +451,8 @@ def _json_default(o):
 
 def main():
     parser = argparse.ArgumentParser(description="オノマトペをコマ内に配置するデータセット作成")
-    parser.add_argument("--onomatopoeia-dir", default="onomatopeias", help="オノマトペ画像ディレクトリ")
-    parser.add_argument("--mask-dir", default="onomatopeia_masks", help="マスク画像ディレクトリ")
+    parser.add_argument("--onomatopoeia-dir", default="onomatopoeias/images", help="オノマトペ画像ディレクトリ")
+    parser.add_argument("--mask-dir", default="onomatopoeias/masks", help="マスク画像ディレクトリ")
     parser.add_argument("--background-dir", default="generated_double_backs_1536x1024", help="背景画像ディレクトリ")
     parser.add_argument("--output-dir", default="onomatopoeia_dataset", help="基本出力ディレクトリ")
     parser.add_argument("--dataset-name", type=str, default="panel_dataset01", help="データセット名")

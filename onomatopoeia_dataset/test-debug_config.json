@@ -38,8 +38,8 @@
     }
   },
   "input_directories": {
-    "onomatopoeia_dir": "onomatopeias",
-    "masks_dir": "onomatopoeia_masks",
+    "onomatopoeia_dir": "onomatopoeias/images",
+    "masks_dir": "onomatopoeias/masks",
     "pages_dir": "generated_double_backs_1536x1024"
   }
 }

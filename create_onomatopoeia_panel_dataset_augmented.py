@@ -726,8 +726,8 @@ def generate_dataset_split(page_files: list, onomatopoeia_pairs: list,
 def main():
     """メイン処理"""
     parser = argparse.ArgumentParser(description="パネル内オノマトペ合成データセット作成（データ拡張版）")
-    parser.add_argument("--onomatopoeia-dir", default="onomatopeias", help="オノマトペ画像ディレクトリ")
-    parser.add_argument("--mask-dir", default="onomatopeia_masks", help="マスク画像ディレクトリ")
+    parser.add_argument("--onomatopoeia-dir", default="onomatopoeias/images", help="オノマトペ画像ディレクトリ")
+    parser.add_argument("--mask-dir", default="onomatopoeias/masks", help="マスク画像ディレクトリ")
     parser.add_argument("--page-dir", default="generated_double_backs_1536x1024", help="ページ画像ディレクトリ")
     parser.add_argument("--output-dir", default="onomatopoeia_dataset", help="基本出力ディレクトリ")
     parser.add_argument("--dataset-name", type=str, default="1000-panel-aug", help="データセット名")
