@@ -10,15 +10,17 @@ from glob import glob
 from pathlib import Path
 
 # ===== 設定 =====
-mask_root = "./../Manga109/masks"         # マスクのルート（masks/作品名/カテゴリ名/*.png）
-image_root = "./../Manga109/images"       # 画像のルート
+#mask_root = "./../Manga109/masks"         # マスクのルート（masks/作品名/カテゴリ名/*.png）
+#image_root = "./../Manga109/images"       # 画像のルート
+mask_root = "./../Manga109_released_2023_12_07/masks/"
+image_root = "./../Manga109_released_2023_12_07/images/"
 target_category = "balloon"                                   # 処理対象カテゴリ
 
 # データセット設定（target_categoryベースで出力先を決定）
 datasets = {
     "real_dataset": {
-        "output_root": f"./{target_category}_dataset/real100_dataset",
-        "num_samples": 100,
+        "output_root": f"./{target_category}_dataset/real750_dataset",
+        "num_samples": 750,
         "structure": "train_val"  # train/val 構造
     },
     "test_dataset": {

@@ -457,7 +457,7 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
     model.eval()
 
     pred_dir = run_dir / cfg["PRED_DIR"]
-    pred_dir.mkdir(exist_ok=True)
+    pred_dir.mkdir(exist_ok=True, parents=True)
     images_for_wandb = []
 
     cnt = 0
@@ -476,34 +476,42 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
             out_path = pred_dir / f"pred_{epoch:03}_{stem[i]}.png"
             Image.fromarray(pred_bin.astype(np.uint8)).save(out_path)
 
-            # wandb image (stack original, GT, pred)
-            orig_np = (img[0].cpu().permute(1,2,0).numpy()*255).astype(np.uint8)
-            
-            # 画像をリサイズしてメモリ削減（表示用なので品質低下OK）
-            h, w = orig_np.shape[:2]
-            display_h, display_w = h // 2, w // 2  # 半分のサイズに
-            orig_small = Image.fromarray(orig_np).resize((display_w, display_h))
-            gt_small = Image.fromarray(gt_np.astype(np.uint8)).resize((display_w, display_h))
-            pred_small = Image.fromarray(pred_bin.astype(np.uint8)).resize((display_w, display_h))
-            
-            trio = np.concatenate([
-                np.array(orig_small),
-                np.stack([np.array(gt_small)]*3, 2),
-                np.stack([np.array(pred_small)]*3, 2)
-            ], axis=1)
-            
-            images_for_wandb.append(wandb.Image(trio,
-                                    caption=f"ep{epoch:03}-{stem[i]}"))
+            # wandb が有効な場合のみ wandb 用の画像を作成してログ
+            if cfg.get("USE_WANDB", True):
+                # wandb image (stack original, GT, pred)
+                orig_np = (img[0].cpu().permute(1,2,0).numpy()*255).astype(np.uint8)
+                
+                # 画像をリサイズしてメモリ削減（表示用なので品質低下OK）
+                h, w = orig_np.shape[:2]
+                display_h, display_w = h // 2, w // 2  # 半分のサイズに
+                orig_small = Image.fromarray(orig_np).resize((display_w, display_h))
+                gt_small = Image.fromarray(gt_np.astype(np.uint8)).resize((display_w, display_h))
+                pred_small = Image.fromarray(pred_bin.astype(np.uint8)).resize((display_w, display_h))
+                
+                trio = np.concatenate([
+                    np.array(orig_small),
+                    np.stack([np.array(gt_small)]*3, 2),
+                    np.stack([np.array(pred_small)]*3, 2)
+                ], axis=1)
+                
+                images_for_wandb.append(wandb.Image(trio,
+                                        caption=f"ep{epoch:03}-{stem[i]}"))
+
+                # メモリ解放（wandb 用のバッファ）
+                del orig_np, orig_small, gt_small, pred_small, trio
+
             cnt += 1
             
             # メモリ解放
-            del img, gt, pred, pred_bin, gt_np, orig_np
-            del orig_small, gt_small, pred_small, trio
+            del img, gt, pred, pred_bin, gt_np
             
         if cnt >= cfg["PRED_SAMPLE_N"]: break
 
-    if images_for_wandb:
+    if cfg.get("USE_WANDB", True) and images_for_wandb:
         wandb.log({f"pred_samples_epoch_{epoch}": images_for_wandb})
+    elif not cfg.get("USE_WANDB", True):
+        # 簡単な通知
+        print(f"[Info] wandb disabled: saved {cnt} prediction images to {pred_dir}")
     
     # 予測保存後にメモリクリア
     if torch.cuda.is_available():
@@ -541,6 +549,9 @@ def parse_args():
                         help='Wandb project name (default: use CFG["WANDB_PROJ"])')
     parser.add_argument('--run-name', type=str, default=None,
                         help='Wandb run name (default: auto-generated)')
+    # 新規オプション: wandb を無効化
+    parser.add_argument('--no-wandb', action='store_true',
+                        help='Disable wandb logging and initialization')
     
     return parser.parse_args()
 
@@ -590,7 +601,12 @@ def main():
     if args.run_name:
         cfg["RUN_NAME"] = args.run_name
         print(f"🏷️  Run name: {cfg['RUN_NAME']}")
-    
+
+    # 新規: wandb を使うかどうかの設定
+    cfg["USE_WANDB"] = not getattr(args, "no_wandb", False)
+    if not cfg["USE_WANDB"]:
+        print("🚫 wandb logging is DISABLED. All wandb operations will be skipped.")
+
     seed_everything(cfg["SEED"])
     dev="cuda" if torch.cuda.is_available() else "cpu"
     
@@ -628,8 +644,14 @@ def main():
     if not cfg["RUN_NAME"]:
         cfg["RUN_NAME"] = model_tag
 
-    wandb.init(project=CFG["WANDB_PROJ"], name=CFG["RUN_NAME"], config=CFG)
-    run_dir = Path(wandb.run.dir)
+    # wandb の初期化はオプション化
+    if cfg.get("USE_WANDB", True):
+        wandb.init(project=CFG["WANDB_PROJ"], name=CFG["RUN_NAME"], config=CFG)
+        run_dir = Path(wandb.run.dir)
+    else:
+        # wandb を使わない場合はローカルの run ディレクトリを作成
+        run_dir = Path("runs") / cfg["RUN_NAME"]
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     root=cfg["ROOT"]
     train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"])
@@ -687,13 +709,16 @@ def main():
             rec_sampled = rec[sample_indices]
             prec_sampled = prec[sample_indices]
             
-            wandb.log({"epoch": ep,
-                    "val/pr_auc": pr_auc,
-                    "val/pr_curve": wandb.plot.line(
-                            wandb.Table(data=np.column_stack([rec_sampled, prec_sampled]),
-                                        columns=["recall","precision"]),
-                            "recall", "precision",
-                            title=f"PR Curve ep{ep} (AUC={pr_auc:.3f})")})
+            if cfg.get("USE_WANDB", True):
+                wandb.log({"epoch": ep,
+                        "val/pr_auc": pr_auc,
+                        "val/pr_curve": wandb.plot.line(
+                                wandb.Table(data=np.column_stack([rec_sampled, prec_sampled]),
+                                            columns=["recall","precision"]),
+                                "recall", "precision",
+                                title=f"PR Curve ep{ep} (AUC={pr_auc:.3f})")})
+            else:
+                print(f"[Info] PR AUC (ep {ep}): {pr_auc:.4f} (wandb disabled)")
             
             # PR Curve後にメモリクリア
             del probs, gts, prec, rec, sample_indices, rec_sampled, prec_sampled
@@ -709,10 +734,13 @@ def main():
             torch.cuda.empty_cache()
         gc.collect()
 
-        wandb.log({"epoch":ep,"loss":tr_loss,
-                   "val_dice":va_dice,"val_iou":va_iou,
-                   "lr":sched.get_last_lr()[0]})
-        print(f"[{ep:03}] loss={tr_loss:.4f} dice={va_dice:.4f} iou={va_iou:.4f}  {time.time()-t:.1f}s")
+        # wandb にログ（オプション）
+        if cfg.get("USE_WANDB", True):
+            wandb.log({"epoch":ep,"loss":tr_loss,
+                       "val_dice":va_dice,"val_iou":va_iou,
+                       "lr":sched.get_last_lr()[0]})
+        else:
+            print(f"[Epoch {ep}] loss={tr_loss:.4f} dice={va_dice:.4f} iou={va_iou:.4f}  {time.time()-t:.1f}s")
 
         if va_iou>best_iou:
             best_iou,patience=va_iou,0

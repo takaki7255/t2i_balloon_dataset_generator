@@ -89,6 +89,9 @@ Examples:
                         help=f'Wandb project name (default: {CFG["WANDB_PROJ"]})')
     parser.add_argument('--run-name', type=str, default=None,
                         help='Wandb run name (default: auto-generated)')
+    # 新規: wandb を有効化するフラグ（デフォルトは無効）
+    parser.add_argument('--use-wandb', action='store_true',
+                        help='Enable wandb logging (disabled by default)')
     
     # その他
     parser.add_argument('--freeze-encoder', action='store_true',
@@ -177,8 +180,15 @@ def main():
     if not cfg["RUN_NAME"]:
         cfg["RUN_NAME"] = f"{cfg['DATASET']}-finetune"
 
-    wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
-    run_dir = Path(wandb.run.dir)
+    # wandb の初期化はオプション（デフォルト: 無効）
+    cfg["USE_WANDB"] = getattr(args, "use_wandb", False)
+    if cfg["USE_WANDB"]:
+        wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
+        run_dir = Path(wandb.run.dir)
+    else:
+        print("🚫 wandb disabled: running without wandb logging")
+        run_dir = Path("runs") / cfg["RUN_NAME"]
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------- データローダ ----------
     root = cfg["ROOT"]
@@ -220,9 +230,13 @@ def main():
 
         save_predictions(model, va_dl, cfg, ep, run_dir, dev)
 
-        wandb.log({"epoch": ep, "loss": tr_loss,
-                   "val_dice": va_dice, "val_iou": va_iou,
-                   "lr": sched.get_last_lr()[0]})
+        if cfg.get("USE_WANDB", False):
+            wandb.log({"epoch": ep, "loss": tr_loss,
+                       "val_dice": va_dice, "val_iou": va_iou,
+                       "lr": sched.get_last_lr()[0]})
+        else:
+            print(f"[Epoch {ep}] loss={tr_loss:.4f}  dice={va_dice:.4f}  iou={va_iou:.4f}  {time.time()-t0:.1f}s")
+
         print(f"[{ep:03}] loss={tr_loss:.4f}  dice={va_dice:.4f}  iou={va_iou:.4f}  {time.time()-t0:.1f}s")
 
         if va_iou > best_iou:

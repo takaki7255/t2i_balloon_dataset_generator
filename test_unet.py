@@ -260,9 +260,9 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
     images_dir = result_dir / "images"
     predicts_dir = result_dir / "predicts"
     comparisons_dir = result_dir / "comparisons"
-    images_dir.mkdir(exist_ok=True)
-    predicts_dir.mkdir(exist_ok=True)
-    comparisons_dir.mkdir(exist_ok=True)
+    images_dir.mkdir(exist_ok=True, parents=True)
+    predicts_dir.mkdir(exist_ok=True, parents=True)
+    comparisons_dir.mkdir(exist_ok=True, parents=True)
     
     img_logs = []
     saved = 0
@@ -289,8 +289,8 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
             ], axis=1)
             Image.fromarray(comparison).save(comparisons_dir / f"{stem[i]}_comparison.png")
             
-            # wandb用の画像（最初のN枚のみ）
-            if saved < cfg["SAVE_PRED_N"]:
+            # wandb用の画像（最初のN枚のみ） - wandb が有効な場合のみ作成
+            if cfg.get("USE_WANDB", True) and saved < cfg.get("SAVE_PRED_N", 0):
                 trio = np.concatenate([
                     orig_img,
                     np.stack([gt_np] * 3, 2),
@@ -299,8 +299,11 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
                 img_logs.append(wandb.Image(trio, caption=stem[i]))
                 saved += 1
     
-    if img_logs:
+    # wandb ログは有効時のみ
+    if cfg.get("USE_WANDB", True) and img_logs:
         wandb.log({"test_samples": img_logs})
+    elif not cfg.get("USE_WANDB", True):
+        print(f"[Info] wandb disabled: saved {saved} sample images to {result_dir}")
     
     print(f"画像保存完了: {images_dir}")
     print(f"予測結果保存完了: {predicts_dir}")
@@ -424,7 +427,7 @@ def main():
     
     # CFGを上書き
     cfg = CFG.copy()
-    
+
     # --model-path が指定された場合、ファイル名からMODEL_TAGを自動設定
     if args.model_path:
         model_stem = Path(args.model_path).stem  # 拡張子なしのファイル名
@@ -458,8 +461,13 @@ def main():
     seed_everything(cfg["SEED"])
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # 新規: wandb を使うかどうかの設定
+    cfg["USE_WANDB"] = not getattr(args, "no_wandb", False)
+    if not cfg["USE_WANDB"]:
+        print("🚫 wandb logging is DISABLED. All wandb operations will be skipped.")
+
     # ---------- wandb ----------
-    if not args.no_wandb:
+    if cfg.get("USE_WANDB", True):
         wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
         run_dir = Path(wandb.run.dir)
     else:
@@ -505,7 +513,7 @@ def main():
     print(f"Accuracy:     {metrics['accuracy']:.4f}")
 
     # wandb にログ
-    if not args.no_wandb:
+    if cfg.get("USE_WANDB", True):
         wandb.log({
             "test_avg_dice": metrics["avg_dice"],
             "test_avg_iou": metrics["avg_iou"],
@@ -514,6 +522,8 @@ def main():
             "test_global_iou": metrics["global_iou"],
             "test_accuracy": metrics["accuracy"]
         })
+    else:
+        print(f"[Info] wandb disabled: test metrics printed to console only.")
 
     # ---------- 全画像と予測結果を保存 ----------
     print("\n予測結果を保存中...")
@@ -526,7 +536,7 @@ def main():
     print(f"\n=== 完了 ===")
     print(f"結果保存先: {result_dir}")
     
-    if not args.no_wandb:
+    if cfg.get("USE_WANDB", True):
         wandb.finish()
 
 if __name__=="__main__":
