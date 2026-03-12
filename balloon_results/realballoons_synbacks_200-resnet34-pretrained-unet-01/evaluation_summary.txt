@@ -1,0 +1,24 @@
+ResNet-UNet Model Evaluation Results
+==================================================
+
+Model: realballoons_synbacks_200-resnet34-pretrained-unet-01
+Backbone: resnet34
+Dataset: balloon_dataset\test300_dataset
+Image Size: (384, 512)
+Total Images: 300
+Evaluation Time: 2026-03-12 21:52:31
+
+Average Metrics (per image):
+  Dice Score: 0.7927 ± 0.1447
+  IoU:        0.6769 ± 0.1720
+  Precision:  0.7197 ± 0.1807
+  Recall:     0.9204 ± 0.0845
+  F1 Score:   0.7927 ± 0.1447
+
+Global Metrics (all pixels):
+  Dice Score: 0.8163
+  IoU:        0.6896
+  Precision:  0.7324
+  Recall:     0.9218
+  F1 Score:   0.8163
+  Accuracy:   0.9507

@@ -298,6 +298,44 @@ def collect_probs(model, loader, device):
         
     return probs, gts
 
+# --- 新規: 閾値最適化 ------------------------------------------
+def find_best_threshold(probs, gts, metric='iou', n_steps=101):
+    """最適な閾値を検索する（デフォルトは IoU 最大化）
+
+    Args:
+        probs: 1D numpy array of predicted probabilities
+        gts:   1D numpy array of ground-truth binary labels (0/1)
+        metric: 'iou' or 'dice'
+        n_steps: number of thresholds to try between 0.0 and 1.0
+
+    Returns:
+        best_thr (float), best_score (float)
+    """
+    assert metric in ('iou', 'dice')
+    thresholds = np.linspace(0.0, 1.0, n_steps)
+    best_thr = 0.5
+    best_score = -1.0
+
+    # avoid expensive operations inside python loop if arrays are huge,
+    # but a simple loop is fine for typical sizes
+    for thr in thresholds:
+        pb = (probs >= thr).astype(np.uint8)
+        tp = np.logical_and(pb == 1, gts == 1).sum()
+        fp = np.logical_and(pb == 1, gts == 0).sum()
+        fn = np.logical_and(pb == 0, gts == 1).sum()
+
+        if metric == 'iou':
+            denom = tp + fp + fn
+            score = tp / denom if denom > 0 else 1.0
+        else:  # dice
+            denom = 2 * tp + fp + fn
+            score = (2 * tp) / denom if denom > 0 else 1.0
+
+        if score > best_score:
+            best_score = score
+            best_thr = thr
+    return float(best_thr), float(best_score)
+
 # -------------- U-Net --------------
 class DoubleConv(nn.Module):
     def __init__(self, in_c, out_c):
@@ -460,6 +498,9 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
     pred_dir.mkdir(exist_ok=True, parents=True)
     images_for_wandb = []
 
+    # 使う閾値（事前に計算されていればそれを使う。なければ 0.5）
+    thr = float(cfg.get("BEST_THR", 0.5))
+
     cnt = 0
     for x, y, stem in loader:
         for i in range(len(x)):
@@ -469,7 +510,8 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
             
             pred = torch.sigmoid(model(img))[0,0]          # (H,W)
             
-            pred_bin = (pred > 0.5).cpu().numpy()*255
+            # 二値化に最適閾値を使う
+            pred_bin = (pred > thr).cpu().numpy()*255
             gt_np    = gt[0].cpu().numpy()*255
 
             # Save PNG
@@ -494,9 +536,8 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
                     np.stack([np.array(pred_small)]*3, 2)
                 ], axis=1)
                 
-                images_for_wandb.append(wandb.Image(trio,
-                                        caption=f"ep{epoch:03}-{stem[i]}"))
-
+                images_for_wandb.append(wandb.Image(trio, caption=f"ep{epoch:03}-{stem[i]} (thr={thr:.2f})"))
+                
                 # メモリ解放（wandb 用のバッファ）
                 del orig_np, orig_small, gt_small, pred_small, trio
 
@@ -719,6 +760,19 @@ def main():
                                 title=f"PR Curve ep{ep} (AUC={pr_auc:.3f})")})
             else:
                 print(f"[Info] PR AUC (ep {ep}): {pr_auc:.4f} (wandb disabled)")
+
+            # ここで閾値最適化を行い、cfg と run_dir に保存
+            try:
+                best_thr, best_score = find_best_threshold(probs, gts, metric='iou')
+                cfg['BEST_THR'] = best_thr
+                thr_path = run_dir / 'best_threshold.txt'
+                with open(thr_path, 'w', encoding='utf-8') as f:
+                    f.write(f"{best_thr:.4f}\n")
+                print(f"[Info] Best threshold (IoU) = {best_thr:.3f} (IoU={best_score:.4f}) -> saved: {thr_path}")
+                if cfg.get("USE_WANDB", True):
+                    wandb.log({"val/best_threshold": best_thr, "val/best_threshold_iou": best_score})
+            except Exception as e:
+                print(f"[Warning] threshold optimization failed: {e}")
             
             # PR Curve後にメモリクリア
             del probs, gts, prec, rec, sample_indices, rec_sampled, prec_sampled

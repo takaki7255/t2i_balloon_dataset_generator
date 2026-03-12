@@ -55,6 +55,10 @@ Available Arguments:
 --patience      : Early stopping patience (epochs without improvement)
 --wandb-proj    : Wandb project name
 --run-name      : Wandb run name
+--use-wandb     : Enable wandb logging (disabled by default)
+--optimize-threshold : Enable post-hoc threshold optimization (compute best threshold on val set)
+--thr-metric    : Metric to maximize when optimizing threshold (iou or dice)
+--thr-steps     : Number of threshold steps to try between 0.0 and 1.0
 """
 
 import glob, random, time, os
@@ -81,7 +85,8 @@ from models import ResNetUNet
 CFG = {
     # データセット
     "ROOT":        Path("./balloon_dataset/real200_dataset"),
-    "IMG_SIZE":    (384, 512),  # (height, width)
+    # "IMG_SIZE":    (384, 512),  # (height, width)
+    "IMG_SIZE": (576, 768),  # (height, width) - 512x512 より大きいサイズで試す
     "IMAGENET_NORM": True,      # ImageNet正規化 (pretrained推奨)
 
     # モデル
@@ -105,6 +110,7 @@ CFG = {
     "WANDB_PROJ":  "balloon-seg-resnet",
     "DATASET":     "real200",
     "RUN_NAME":    "",
+    "USE_WANDB":   False,
 
     "MODELS_DIR":  Path("balloon_models"),
 
@@ -271,6 +277,42 @@ def collect_probs(model, loader, device):
         
     return probs, gts
 
+# --- 新規: 閾値最適化ユーティリティ ---------------------------------
+def find_best_threshold(probs, gts, metric='iou', n_steps=101):
+    """最適な閾値を検索する（IoU/Dice 最大化）
+
+    Args:
+        probs: 1D numpy array of predicted probabilities
+        gts:   1D numpy array of ground-truth binary labels (0/1)
+        metric: 'iou' or 'dice'
+        n_steps: number of thresholds to try between 0.0 and 1.0
+
+    Returns:
+        best_thr (float), best_score (float)
+    """
+    assert metric in ('iou', 'dice')
+    thresholds = np.linspace(0.0, 1.0, n_steps)
+    best_thr = 0.5
+    best_score = -1.0
+
+    for thr in thresholds:
+        pb = (probs >= thr).astype(np.uint8)
+        tp = np.logical_and(pb == 1, gts == 1).sum()
+        fp = np.logical_and(pb == 1, gts == 0).sum()
+        fn = np.logical_and(pb == 0, gts == 1).sum()
+
+        if metric == 'iou':
+            denom = tp + fp + fn
+            score = tp / denom if denom > 0 else 1.0
+        else:
+            denom = 2 * tp + fp + fn
+            score = (2 * tp) / denom if denom > 0 else 1.0
+
+        if score > best_score:
+            best_score = score
+            best_thr = thr
+    return float(best_thr), float(best_score)
+
 # -------------- Loss --------------------
 class DiceLoss(nn.Module):
     def forward(self,y_p,y_t,eps=1e-7):
@@ -381,8 +423,11 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
     model.eval()
 
     pred_dir = run_dir / cfg["PRED_DIR"]
-    pred_dir.mkdir(exist_ok=True)
+    pred_dir.mkdir(exist_ok=True, parents=True)
     images_for_wandb = []
+
+    # 使用する閾値（事前に計算されていればそれを使う。なければ 0.5）
+    thr = float(cfg.get("BEST_THR", 0.5))
 
     cnt = 0
     for x, y, stem in loader:
@@ -392,37 +437,45 @@ def save_predictions(model, loader, cfg, epoch, run_dir, device):
             gt  = y[i]
             
             pred = torch.sigmoid(model(img))[0,0]
-            pred_bin = (pred > 0.5).cpu().numpy()*255
+            # 二値化に最適閾値を使う
+            pred_bin = (pred > thr).cpu().numpy()*255
             gt_np    = gt[0].cpu().numpy()*255
 
+            # Save PNG
             out_path = pred_dir / f"pred_{epoch:03}_{stem[i]}.png"
             Image.fromarray(pred_bin.astype(np.uint8)).save(out_path)
 
-            orig_np = (img[0].cpu().permute(1,2,0).numpy()*255).astype(np.uint8)
-            
-            h, w = orig_np.shape[:2]
-            display_h, display_w = h // 2, w // 2
-            orig_small = Image.fromarray(orig_np).resize((display_w, display_h))
-            gt_small = Image.fromarray(gt_np.astype(np.uint8)).resize((display_w, display_h))
-            pred_small = Image.fromarray(pred_bin.astype(np.uint8)).resize((display_w, display_h))
-            
-            trio = np.concatenate([
-                np.array(orig_small),
-                np.stack([np.array(gt_small)]*3, 2),
-                np.stack([np.array(pred_small)]*3, 2)
-            ], axis=1)
-            
-            images_for_wandb.append(wandb.Image(trio, caption=f"ep{epoch:03}-{stem[i]}"))
+            # wandb 用の画像は wandb が有効な場合のみ作成
+            if cfg.get("USE_WANDB", False):
+                orig_np = (img[0].cpu().permute(1,2,0).numpy()*255).astype(np.uint8)
+                
+                # 画像をリサイズしてメモリ削減（表示用なので品質低下OK）
+                h, w = orig_np.shape[:2]
+                display_h, display_w = h // 2, w // 2  # 半分のサイズに
+                orig_small = Image.fromarray(orig_np).resize((display_w, display_h))
+                gt_small = Image.fromarray(gt_np.astype(np.uint8)).resize((display_w, display_h))
+                pred_small = Image.fromarray(pred_bin.astype(np.uint8)).resize((display_w, display_h))
+                
+                trio = np.concatenate([
+                    np.array(orig_small),
+                    np.stack([np.array(gt_small)]*3, 2),
+                    np.stack([np.array(pred_small)]*3, 2)
+                ], axis=1)
+                images_for_wandb.append(wandb.Image(trio, caption=f"ep{epoch:03}-{stem[i]} (thr={thr:.2f})"))
+
             cnt += 1
             
-            del img, gt, pred, pred_bin, gt_np, orig_np
-            del orig_small, gt_small, pred_small, trio
+            # メモリ解放
+            del img, gt, pred, pred_bin, gt_np
             
         if cnt >= cfg["PRED_SAMPLE_N"]: break
 
-    if images_for_wandb:
+    if cfg.get("USE_WANDB", False) and images_for_wandb:
         wandb.log({f"pred_samples_epoch_{epoch}": images_for_wandb})
+    elif not cfg.get("USE_WANDB", False):
+        print(f"[Info] wandb disabled: saved {cnt} prediction images to {pred_dir}")
     
+    # 予測保存後にメモリクリア
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
@@ -470,6 +523,16 @@ def parse_args():
                         help='Wandb project name (default: use CFG["WANDB_PROJ"])')
     parser.add_argument('--run-name', type=str, default=None,
                         help='Wandb run name (default: auto-generated)')
+    # 新規: wandb を有効化するフラグ（デフォルトは無効）
+    parser.add_argument('--use-wandb', action='store_true',
+                        help='Enable wandb logging (disabled by default)')
+    # 閾値最適化オプション（任意）
+    parser.add_argument('--optimize-threshold', action='store_true',
+                        help='Enable post-hoc threshold optimization (compute best threshold on val set)')
+    parser.add_argument('--thr-metric', type=str, default='iou', choices=['iou','dice'],
+                        help='Metric to maximize when optimizing threshold (iou or dice)')
+    parser.add_argument('--thr-steps', type=int, default=101,
+                        help='Number of threshold steps to try between 0.0 and 1.0')
     
     return parser.parse_args()
 
@@ -541,7 +604,26 @@ def main():
     if args.run_name:
         cfg["RUN_NAME"] = args.run_name
         print(f"🏷️  Run name: {cfg['RUN_NAME']}")
-    
+
+    # 新規: wandb を使うかどうかの設定（デフォルト: 無効）
+    cfg["USE_WANDB"] = getattr(args, "use_wandb", False)
+    if cfg["USE_WANDB"]:
+        wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
+        run_dir = Path(wandb.run.dir)
+    else:
+        print("🚫 wandb disabled: running without wandb logging")
+        run_dir = Path("runs") / cfg["RUN_NAME"]
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+    # 閾値最適化設定
+    cfg["OPTIMIZE_THRESHOLD"] = getattr(args, 'optimize_threshold', False)
+    cfg["THR_METRIC"] = getattr(args, 'thr_metric', 'iou')
+    cfg["THR_STEPS"] = getattr(args, 'thr_steps', 101)
+    if cfg["OPTIMIZE_THRESHOLD"]:
+        print(f"🔎 Threshold optimization ENABLED (metric={cfg['THR_METRIC']}, steps={cfg['THR_STEPS']})")
+    else:
+        print("🔎 Threshold optimization DISABLED (default threshold=0.5)")
+
     seed_everything(cfg["SEED"])
     dev="cuda" if torch.cuda.is_available() else "cpu"
     
@@ -569,8 +651,13 @@ def main():
     if not cfg["RUN_NAME"]:
         cfg["RUN_NAME"] = model_tag
 
-    wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
-    run_dir = Path(wandb.run.dir)
+    if cfg["USE_WANDB"]:
+        wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
+        run_dir = Path(wandb.run.dir)
+    else:
+        print("🚫 wandb disabled: running without wandb logging")
+        run_dir = Path("runs") / cfg["RUN_NAME"]
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     root=cfg["ROOT"]
     train_ds=BalloonDataset(root/"train/images",root/"train/masks",cfg["IMG_SIZE"],cfg["IMAGENET_NORM"])
@@ -592,7 +679,8 @@ def main():
     print(f"\nModel Info:")
     print(f"  Total parameters: {model_info['total_params']:,}")
     print(f"  Trainable parameters: {model_info['trainable_params']:,}")
-    wandb.config.update(model_info)
+    if cfg["USE_WANDB"]:
+        wandb.config.update(model_info)
     
     if cfg["RESUME"]:
         model.load_state_dict(torch.load(cfg["RESUME"],map_location=dev))
@@ -645,13 +733,30 @@ def main():
             rec_sampled = rec[sample_indices]
             prec_sampled = prec[sample_indices]
             
-            wandb.log({"epoch": ep,
-                    "val/pr_auc": pr_auc,
-                    "val/pr_curve": wandb.plot.line(
-                            wandb.Table(data=np.column_stack([rec_sampled, prec_sampled]),
-                                        columns=["recall","precision"]),
-                            "recall", "precision",
-                            title=f"PR Curve ep{ep} (AUC={pr_auc:.3f})")})
+            if cfg.get("USE_WANDB", False):
+                wandb.log({"epoch": ep,
+                        "val/pr_auc": pr_auc,
+                        "val/pr_curve": wandb.plot.line(
+                                wandb.Table(data=np.column_stack([rec_sampled, prec_sampled]),
+                                            columns=["recall","precision"]),
+                                "recall", "precision",
+                                title=f"PR Curve ep{ep} (AUC={pr_auc:.3f})")})
+            else:
+                print(f"[Info] PR AUC (ep {ep}): {pr_auc:.4f} (wandb disabled)")
+
+            # オプション: 閾値最適化
+            if cfg.get("OPTIMIZE_THRESHOLD", False):
+                try:
+                    best_thr, best_score = find_best_threshold(probs, gts, metric=cfg.get("THR_METRIC", 'iou'), n_steps=cfg.get("THR_STEPS", 101))
+                    cfg['BEST_THR'] = best_thr
+                    thr_path = run_dir / 'best_threshold.txt'
+                    with open(thr_path, 'w', encoding='utf-8') as f:
+                        f.write(f"{best_thr:.4f}\n")
+                    print(f"[Info] Best threshold ({cfg.get('THR_METRIC','iou')}) = {best_thr:.3f} (score={best_score:.4f}) -> saved: {thr_path}")
+                    if cfg.get("USE_WANDB", False):
+                        wandb.log({"val/best_threshold": best_thr, "val/best_threshold_score": best_score})
+                except Exception as e:
+                    print(f"[Warning] threshold optimization failed: {e}")
             
             del probs, gts, prec, rec, sample_indices, rec_sampled, prec_sampled
             if torch.cuda.is_available():
@@ -664,10 +769,12 @@ def main():
             torch.cuda.empty_cache()
         gc.collect()
 
-        wandb.log({"epoch":ep,"loss":tr_loss,
-                   "val_dice":va_dice,"val_iou":va_iou,
-                   "lr":sched.get_last_lr()[0]})
-        print(f"[{ep:03}] loss={tr_loss:.4f} dice={va_dice:.4f} iou={va_iou:.4f}  {time.time()-t:.1f}s")
+        if cfg.get("USE_WANDB", False):
+            wandb.log({"epoch":ep,"loss":tr_loss,
+                       "val_dice":va_dice,"val_iou":va_iou,
+                       "lr":sched.get_last_lr()[0]})
+        else:
+            print(f"[Epoch {ep}] loss={tr_loss:.4f} dice={va_dice:.4f} iou={va_iou:.4f}  {time.time()-t:.1f}s")
 
         if va_iou>best_iou:
             best_iou,patience=va_iou,0

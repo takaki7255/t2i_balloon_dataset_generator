@@ -43,8 +43,7 @@ python test_resnet_unet.py \
 # Disable wandb logging
 python test_resnet_unet.py \
     --model-tag real200-resnet34-pretrained-unet-01 \
-    --backbone resnet34 \
-    --no-wandb
+    --backbone resnet34
 
 Available Arguments:
 -------------------
@@ -58,7 +57,7 @@ Available Arguments:
 --save-pred-n   : Number of prediction images to save (0=save all)
 --wandb-proj    : Wandb project name
 --run-name      : Wandb run name
---no-wandb      : Disable wandb logging
+--use-wandb     : Enable wandb logging (disabled by default)
 
 Output:
 -------
@@ -93,7 +92,8 @@ CFG = {
     "BACKBONE":    "resnet34",  # "resnet34" or "resnet50"
     "DATA_ROOT":   Path("test_dataset"),
     # ----------------------------------
-    "IMG_SIZE":    (384, 512),
+    # "IMG_SIZE":    (384, 512),
+    "IMG_SIZE":    (576, 768),
     "IMAGENET_NORM": True,  # ImageNet正規化 (pretrained推奨)
     "BATCH":       8,
 
@@ -160,7 +160,7 @@ class BalloonDataset(Dataset):
 
 # ---------------- Detailed Metrics -----------------
 @torch.no_grad()
-def evaluate_detailed(model, loader, device):
+def evaluate_detailed(model, loader, device, thr=0.5):
     """詳細な評価メトリクスを計算"""
     model.eval()
     
@@ -175,7 +175,7 @@ def evaluate_detailed(model, loader, device):
     for x, y, _ in tqdm(loader, desc="評価中", leave=False):
         x, y = x.to(device), y.to(device)
         p = torch.sigmoid(model(x))
-        pb = (p > 0.5).float()
+        pb = (p > thr).float()
         
         for i in range(x.size(0)):
             pred_flat = pb[i].flatten()
@@ -239,7 +239,7 @@ def evaluate_detailed(model, loader, device):
 
 # ---------------- Save All Predictions and Images -------
 @torch.no_grad()
-def save_all_predictions(model, loader, cfg, device, result_dir):
+def save_all_predictions(model, loader, cfg, device, result_dir, thr=0.5):
     """すべての画像と予測結果を保存"""
     model.eval()
     
@@ -252,38 +252,52 @@ def save_all_predictions(model, loader, cfg, device, result_dir):
     
     img_logs = []
     saved = 0
+
+    # 逆正規化パラメータ（ImageNet）
+    if cfg.get("IMAGENET_NORM", False):
+        mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+        std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+    else:
+        mean = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+        std = np.array([1.0, 1.0, 1.0], dtype=np.float32)
     
     for x, y, stem in tqdm(loader, desc="予測結果保存中"):
         for i in range(len(x)):
             img = x[i:i+1].to(device)
             gt = y[i]
             pred = torch.sigmoid(model(img))[0, 0]
-            pred_bin = (pred > 0.5).cpu().numpy() * 255
-            gt_np = gt[0].cpu().numpy() * 255
-            
-            orig_img = (x[i].cpu().permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+
+            # 予測・GTをsingle-channel uint8に変換
+            pred_bin = (pred > thr).cpu().numpy().astype(np.uint8) * 255
+            gt_np = (gt[0].cpu().numpy().astype(np.uint8)) * 255
+
+            # 元画像を逆正規化して uint8 RGB に変換
+            img_np = x[i].cpu().permute(1, 2, 0).numpy().astype(np.float32)  # H,W,C, normalized (or 0-1)
+            img_unnorm = (img_np * std.reshape(1, 1, 3)) + mean.reshape(1, 1, 3)
+            orig_img = np.clip(img_unnorm * 255.0, 0, 255).astype(np.uint8)
+
+            # 保存
             Image.fromarray(orig_img).save(images_dir / f"{stem[i]}.png")
-            
             Image.fromarray(pred_bin.astype(np.uint8)).save(predicts_dir / f"{stem[i]}_pred.png")
-            
-            comparison = np.concatenate([
-                orig_img,
-                np.stack([pred_bin] * 3, 2).astype(np.uint8)
-            ], axis=1)
+
+            # 比較画像: 元画像と予測をRGBで横に連結
+            pred_rgb = np.stack([pred_bin] * 3, axis=2).astype(np.uint8)
+            comparison = np.concatenate([orig_img, pred_rgb], axis=1)
             Image.fromarray(comparison).save(comparisons_dir / f"{stem[i]}_comparison.png")
-            
-            if saved < cfg["SAVE_PRED_N"]:
-                trio = np.concatenate([
-                    orig_img,
-                    np.stack([gt_np] * 3, 2),
-                    np.stack([pred_bin] * 3, 2)
-                ], 1)
-                img_logs.append(wandb.Image(trio, caption=stem[i]))
+
+            # wandb 用の画像（最初のN枚のみ） - wandb が有効な場合のみ作成
+            if cfg.get("USE_WANDB", False) and saved < cfg.get("SAVE_PRED_N", 0):
+                gt_rgb = np.stack([gt_np] * 3, axis=2).astype(np.uint8)
+                trio = np.concatenate([orig_img, gt_rgb, pred_rgb], axis=1)
+                img_logs.append(wandb.Image(trio, caption=stem[i] + f" (thr={thr:.2f})"))
                 saved += 1
     
-    if img_logs:
+    # wandb ログは有効時のみ
+    if cfg.get("USE_WANDB", False) and img_logs:
         wandb.log({"test_samples": img_logs})
-    
+    elif not cfg.get("USE_WANDB", False):
+        print(f"[Info] wandb disabled: saved {saved} sample images to {result_dir}")
+
     print(f"画像保存完了: {images_dir}")
     print(f"予測結果保存完了: {predicts_dir}")
     print(f"比較画像保存完了: {comparisons_dir}")
@@ -396,8 +410,13 @@ def parse_args():
                         help='Wandb project name (default: use CFG["WANDB_PROJ"])')
     parser.add_argument('--run-name', type=str, default=None,
                         help='Wandb run name (default: auto-generated)')
-    parser.add_argument('--no-wandb', action='store_true',
-                        help='Disable wandb logging')
+    parser.add_argument('--use-wandb', action='store_true',
+                        help='Enable wandb logging (disabled by default)')
+    # 新規: 学習時に保存された最適閾値を利用するオプション
+    parser.add_argument('--use-best-threshold', action='store_true',
+                        help='If available, load best_threshold.txt from runs/<model_tag>/ and use it for binarization')
+    parser.add_argument('--threshold', type=float, default=0.5,
+                        help='Fallback threshold for binarization if best threshold not used/found (default:0.5)')
     
     return parser.parse_args()
 
@@ -438,17 +457,31 @@ def main():
     seed_everything(cfg["SEED"])
     dev = "cuda" if torch.cuda.is_available() else "cpu"
 
+    # 新規: wandb を使うかどうかの設定
+    cfg["USE_WANDB"] = getattr(args, "use_wandb", False)
+    if not cfg["USE_WANDB"]:
+        print("🚫 wandb logging is DISABLED. All wandb operations will be skipped.")
+
+    # 閾値オプション
+    cfg["USE_BEST_THRESHOLD"] = getattr(args, 'use_best_threshold', False)
+    cfg["THRESHOLD"] = float(getattr(args, 'threshold', 0.5))
+    if cfg["USE_BEST_THRESHOLD"]:
+        # try to locate runs/<MODEL_TAG>/best_threshold.txt or result_dir/best_threshold.txt later
+        print("🔎 Will attempt to load best_threshold.txt from runs/<model_tag>/ if present")
+
     # ---------- wandb ----------
-    if not args.no_wandb:
+    if cfg.get("USE_WANDB", False):
         wandb.init(project=cfg["WANDB_PROJ"], name=cfg["RUN_NAME"], config=cfg)
         run_dir = Path(wandb.run.dir)
     else:
         print("⚠️  Wandb logging disabled")
+        run_dir = Path("runs") / cfg["RUN_NAME"]
+        run_dir.mkdir(parents=True, exist_ok=True)
 
     # ---------- 結果保存ディレクトリ作成 ----------
-    result_dir = Path(args.result_dir) / cfg["MODEL_TAG"]
-    result_dir.mkdir(parents=True, exist_ok=True)
-
+    # NOTE: result_dir is created after resolving the checkpoint path below
+    # to ensure the result folder matches the actual tested model filename.
+ 
     # ---------- data ----------
     test_ds = BalloonDataset(cfg["DATA_ROOT"] / "images",
                             cfg["DATA_ROOT"] / "masks",
@@ -476,6 +509,38 @@ def main():
     else:
         ckpt = Path(args.models_dir) / f"{cfg['MODEL_TAG']}.pt"
     
+    # If a checkpoint path is provided (or resolved), prefer its stem as MODEL_TAG
+    if ckpt is not None and ckpt.exists():
+        cfg["MODEL_TAG"] = ckpt.stem
+    
+    # Now create the result directory named after the actual tested model
+    result_dir = Path(args.result_dir) / cfg["MODEL_TAG"]
+    result_dir.mkdir(parents=True, exist_ok=True)
+
+    # If requested, try to read best_threshold.txt
+    thr = cfg.get("THRESHOLD", 0.5)
+    if cfg.get("USE_BEST_THRESHOLD", False):
+        cand = Path("runs") / cfg["MODEL_TAG"] / "best_threshold.txt"
+        if (cand.exists()):
+            try:
+                thr = float(cand.read_text().strip())
+                print(f"Loaded best threshold from: {cand} -> {thr:.4f}")
+                cfg['BEST_THR'] = thr
+            except Exception as e:
+                print(f"[Warning] failed to read {cand}: {e} (falling back to {thr})")
+        else:
+            # also check result_dir
+            cand2 = result_dir / 'best_threshold.txt'
+            if cand2.exists():
+                try:
+                    thr = float(cand2.read_text().strip())
+                    print(f"Loaded best threshold from: {cand2} -> {thr:.4f}")
+                    cfg['BEST_THR'] = thr
+                except Exception as e:
+                    print(f"[Warning] failed to read {cand2}: {e} (falling back to {thr})")
+            else:
+                print(f"[Info] best_threshold.txt not found in runs/{cfg['MODEL_TAG']} or {result_dir}; using threshold={thr}")
+
     assert ckpt.exists(), f"checkpoint not found: {ckpt}"
     model.load_state_dict(torch.load(ckpt, map_location=dev))
     print(f"モデル読み込み完了: {ckpt}")
@@ -489,7 +554,7 @@ def main():
 
     # ---------- 詳細評価 ----------
     print("\n詳細評価を実行中...")
-    metrics = evaluate_detailed(model, dl, dev)
+    metrics = evaluate_detailed(model, dl, dev, thr=thr)
     
     print(f"\n=== 評価結果 ===")
     print(f"Average Dice: {metrics['avg_dice']:.4f}")
@@ -499,7 +564,8 @@ def main():
     print(f"Global IoU:   {metrics['global_iou']:.4f}")
     print(f"Accuracy:     {metrics['accuracy']:.4f}")
 
-    if not args.no_wandb:
+    # wandb にログ
+    if cfg.get("USE_WANDB", False):
         wandb.log({
             "test_avg_dice": metrics["avg_dice"],
             "test_avg_iou": metrics["avg_iou"],
@@ -508,10 +574,12 @@ def main():
             "test_global_iou": metrics["global_iou"],
             "test_accuracy": metrics["accuracy"]
         })
+    else:
+        print(f"[Info] wandb disabled: test metrics printed to console only.")
 
     # ---------- 全画像と予測結果を保存 ----------
     print("\n予測結果を保存中...")
-    save_all_predictions(model, dl, cfg, dev, result_dir)
+    save_all_predictions(model, dl, cfg, dev, result_dir, thr=thr)
 
     # ---------- 評価結果をファイルに保存 ----------
     print("\n評価結果をファイルに保存中...")
@@ -520,7 +588,7 @@ def main():
     print(f"\n=== 完了 ===")
     print(f"結果保存先: {result_dir}")
     
-    if not args.no_wandb:
+    if cfg.get("USE_WANDB", False):
         wandb.finish()
 
 if __name__=="__main__":

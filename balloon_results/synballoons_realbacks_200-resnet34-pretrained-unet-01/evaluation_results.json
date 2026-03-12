@@ -1,0 +1,36 @@
+{
+  "model_tag": "synballoons_realbacks_200-resnet34-pretrained-unet-01",
+  "backbone": "resnet34",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2026-03-12T21:53:38.145725",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.6382569110093902,
+      "iou": 0.4989564299819623,
+      "precision": 0.9201468740368254,
+      "recall": 0.5221439433759343,
+      "f1_score": 0.6382568680459381
+    },
+    "global_metrics": {
+      "dice": 0.6372838918722893,
+      "iou": 0.4676571210036394,
+      "precision": 0.8849804608201156,
+      "recall": 0.49792109973123927,
+      "f1_score": 0.6372838457891881,
+      "accuracy": 0.9326931084526895
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.19998122283933104,
+    "iou_std": 0.2091859995691286,
+    "precision_std": 0.13751846603926773,
+    "recall_std": 0.21652194047093953,
+    "f1_std": 0.19998121545104525
+  }
+}
