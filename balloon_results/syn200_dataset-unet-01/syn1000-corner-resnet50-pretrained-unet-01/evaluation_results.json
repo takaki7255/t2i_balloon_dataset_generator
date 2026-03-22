@@ -1,0 +1,36 @@
+{
+  "model_tag": "syn1000-corner-resnet50-pretrained-unet-01",
+  "backbone": "resnet50",
+  "data_root": "balloon_dataset\\test300_dataset",
+  "img_size": [
+    384,
+    512
+  ],
+  "batch_size": 8,
+  "evaluation_time": "2026-03-13T00:18:54.854111",
+  "metrics": {
+    "average_metrics": {
+      "dice": 0.8581982225793255,
+      "iou": 0.770073703740907,
+      "precision": 0.8447021687639626,
+      "recall": 0.8943310413499261,
+      "f1_score": 0.8581981736439116
+    },
+    "global_metrics": {
+      "dice": 0.8810466277123072,
+      "iou": 0.7873845769918126,
+      "precision": 0.8611888415545402,
+      "recall": 0.9018418134075161,
+      "f1_score": 0.8810465777388888,
+      "accuracy": 0.9710816616482189
+    }
+  },
+  "statistics": {
+    "total_images": 300,
+    "dice_std": 0.1332319687387227,
+    "iou_std": 0.1615596154417683,
+    "precision_std": 0.1459891311038819,
+    "recall_std": 0.1396289364574767,
+    "f1_std": 0.13323196542525878
+  }
+}
